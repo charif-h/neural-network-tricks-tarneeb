@@ -1,3 +1,5 @@
+import logging
+
 from Cards.Card import CardValue
 from Cards.Card import CardType
 from Cards.Card import Card
@@ -5,13 +7,15 @@ import random
 import numpy as np
 
 class StandarDeck:
-    def __init__(self):
+    def __init__(self, shuffled = False):
         self.cards = []
         for i in CardValue:
             for j in CardType:
                 self.cards.append(Card(i, j))
                 #print(Card(i, j), Card(i, j).cardId())
-        random.shuffle(self.cards)
+        if shuffled:
+            random.shuffle(self.cards)
+        logging.info('new standard deck cards: ' + str(self.cards))
 
     def distripute(self, n):
         ret = []

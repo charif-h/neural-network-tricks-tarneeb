@@ -27,5 +27,12 @@ After showing the tarneeb to everybody, the player distributes 13 cards to each 
 
 ### How to play
 
-
-
+# Playing neural network input
+Information needed to choose a card to play
+1. tarneeb [0, 0, 0, 1]
+2. scores $$[s_0/41, s_1/41, s_2/41, s_3/41]$$
+3. bids $$[b_0/13, b_1/13, b_2/13, b_3/13]$$
+4. wins $$[w_0/13, w_1/13, w_2/13, w_3/13]$$
+5. current turn cards (4 cards)
+6. Current player hand cards (13 cards)
+7. Winner card win=1 loss=-1 ignore=0

@@ -1,7 +1,8 @@
 import random
 import numpy as np
-from keras.layers import Dense
-from keras.models import Sequential
+import keras
+#from keras.layers import Dense
+#from keras.models import Sequential
 from enum import Enum
 
 class actiFunction(Enum):
@@ -36,18 +37,18 @@ def normalActivation(val = actiFunction.RELU, minsigma=2):
     return ret
 
 def newHiddenLayer(Hunits=64, Hactivation="relu"):
-    return Dense(units=normaLawInt(Hunits, Hunits/10), activation=normalActivation(Hactivation))
+    return keras.layers.Dense(units=normaLawInt(Hunits, Hunits/10), activation=normalActivation(Hactivation))
 
 def Model(layers=1, inputs = 64, outputs=1):
-    model = Sequential()
+    model = keras.models.Sequential()
     layers = max(normaLawInt(layers, up=True), 1)
     #inputs = max(normaLawInt(inputs, up=True), inputs)
     #, input_dim=(1,)
-    model.add(Dense(units=64, activation='relu', input_dim=inputs))
+    model.add(keras.layers.Dense(units=64, activation='relu', input_dim=inputs))
     for i in range(layers):
         linputs = max(normaLawInt(inputs, inputs/2, up=False), 1)
         model.add(newHiddenLayer(linputs))
-    model.add(Dense(units=outputs, activation=normalActivation('sigmoid')))
+    model.add(keras.layers.Dense(units=outputs, activation=normalActivation('sigmoid')))
     model.compile(optimizer='sgd', loss='mean_squared_error', metrics=['mae'])
     #model.summary()
     return model

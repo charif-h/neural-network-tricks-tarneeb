@@ -17,7 +17,7 @@ class Player:
                 nh.append(c)
         return nh
 
-    def playCard(self, cards = []):
+    def playCard(self, cards = [], *args, **kwargs):
         crd = self.chooseCard(self.hand)
         if(len(cards) > 0):
             fh = self.filterCardsByType(cards[0].type)
@@ -27,6 +27,7 @@ class Player:
         return crd
 
     def chooseCard(self, ligalCards):
+        print('do not ...')
         return random.choice(ligalCards)
 
     def handToArray(self):
