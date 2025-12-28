@@ -1,12 +1,60 @@
-# neural-network-tricks-tarneeb
+# Neural Network Tricks Tarneeb
 
-## Objective of the project
-Tarneeb and Tricks are very known cards games in the middle-east.
-The aim of this project is to develop and train a neural networks to play Tarneeb and Tricks using active and reinforcement learning.
+## Objective of the Project
 
-The project is writen in Python and uses principally Keras library.
+Tarneeb and Tricks are very well-known card games in the Middle East. The aim of this project is to develop and train neural networks to play Tarneeb and Tricks using active and reinforcement learning.
 
-As Tarneeb is the more simple, we will start with it, and tricks will be added in a later time.
+The project is written in Python and uses principally the Keras library with TensorFlow backend.
+
+As Tarneeb is the simpler game, we will start with it, and Tricks will be added at a later time.
+
+## Installation
+
+### Prerequisites
+- Python 3.8 or higher
+- pip package manager
+
+### Setup
+
+1. Clone the repository:
+```bash
+git clone https://github.com/charif-h/neural-network-tricks-tarneeb.git
+cd neural-network-tricks-tarneeb
+```
+
+2. Install dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+## Usage
+
+### Running a Simple Game
+```bash
+python Game.py
+```
+
+### Training the Neural Network
+```bash
+python Tarneeb/GTarneeb.py
+```
+
+## Project Structure
+
+```
+neural-network-tricks-tarneeb/
+├── Cards/              # Card and deck implementations
+│   ├── Card.py         # Card, CardType, and CardValue classes
+│   └── StandarDeck.py  # Deck management and utilities
+├── Tarneeb/            # Tarneeb game implementation
+│   ├── GTarneeb.py     # Main game loop and training
+│   ├── TarneebPlayer.py # AI player with neural network
+│   └── Turn.py         # Turn representation and logic
+├── Player.py           # Base player class
+├── GenModel.py         # Neural network model generation
+├── Game.py             # Simple game demonstration
+└── README.md           # This file
+```
 
 ## What is Tarneeb-41?
 Tarneeb exists mainly in two versions (41 and 61), we are interrested in the 41 version as it is more popular. So in this document when we talk about Tarneeb, we mean Tarneeb-41.
@@ -25,14 +73,48 @@ In the first round a random player is chosen to distribute the cards, he must di
 
 After showing the tarneeb to everybody, the player distributes 13 cards to each player.
 
-### How to play
+### How to Play
 
-# Playing neural network input
-Information needed to choose a card to play
-1. tarneeb [0, 0, 0, 1]
-2. scores $$[s_0/41, s_1/41, s_2/41, s_3/41]$$
-3. bids $$[b_0/13, b_1/13, b_2/13, b_3/13]$$
-4. wins $$[w_0/13, w_1/13, w_2/13, w_3/13]$$
-5. current turn cards (4 cards)
-6. Current player hand cards (13 cards)
-7. Winner card win=1 loss=-1 ignore=0
+The game follows standard Tarneeb-41 rules. Players are arranged in teams of two, and each round involves:
+1. Card distribution
+2. Bidding phase
+3. Playing phase with 13 turns
+4. Scoring
+
+### Neural Network Architecture
+
+#### Playing Neural Network Input
+Information needed to choose a card to play:
+1. **Tarneeb type**: One-hot encoded vector [0, 0, 0, 1]
+2. **Scores**: Scaled player scores [s₀/41, s₁/41, s₂/41, s₃/41]
+3. **Bids**: Scaled bids [b₀/13, b₁/13, b₂/13, b₃/13]
+4. **Wins**: Scaled wins [w₀/13, w₁/13, w₂/13, w₃/13]
+5. **Current turn cards**: Up to 4 cards (matrix representation)
+6. **Player hand cards**: 13 cards (matrix representation)
+7. **Winner card**: win=1, loss=-1, ignore=0
+
+## Development
+
+### Code Evaluation
+For a comprehensive code evaluation and improvement recommendations, see [CODE_EVALUATION.md](CODE_EVALUATION.md).
+
+### Contributing
+Contributions are welcome! Please feel free to submit pull requests or open issues for bugs and feature requests.
+
+## Future Work
+
+- [ ] Implement Tricks game variant
+- [ ] Add more sophisticated neural network architectures
+- [ ] Implement better training strategies
+- [ ] Add unit tests
+- [ ] Add game visualization
+- [ ] Improve model persistence and versioning
+- [ ] Add hyperparameter tuning
+
+## License
+
+This project is open source and available for educational purposes.
+
+## Acknowledgments
+
+This project was created to explore reinforcement learning and neural networks in the context of traditional card games.

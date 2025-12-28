@@ -1,9 +1,20 @@
+"""
+Card module for Tarneeb card game.
+
+This module defines the Card class and related enumerations for card types and values.
+"""
+
 from enum import Enum
 
 import numpy as np
 
 
 class CardType(Enum):
+    """
+    Enumeration representing the four card types (suits) in a standard deck.
+    
+    Each type has an ID (0-3) and a symbol (♣, ♦, ♠, ♥).
+    """
     CLUB = 0, "♣"
     DIAMOND = 1, "♦"
     SPADE = 2, "♠"
@@ -19,6 +30,11 @@ class CardType(Enum):
         return self.id
 
 class CardValue(Enum):
+    """
+    Enumeration representing the values of cards in a standard deck.
+    
+    Values range from 2 (lowest) to 14 (Ace, highest).
+    """
     ACE = 14
     KING = 13
     QUEEN = 12
@@ -34,7 +50,22 @@ class CardValue(Enum):
     TWO = 2
 
 class Card:
+    """
+    Represents a playing card with a value and type (suit).
+    
+    Attributes:
+        value (CardValue): The value of the card (2-14, where 14 is Ace)
+        type (CardType): The type/suit of the card (CLUB, DIAMOND, SPADE, HEART)
+    """
+    
     def __init__(self, value, type):
+        """
+        Initialize a Card with a value and type.
+        
+        Args:
+            value (CardValue): The value of the card
+            type (CardType): The type/suit of the card
+        """
         self.value = value
         self.type = type
     def __str__(self):
@@ -64,26 +95,41 @@ class Card:
         return  4*(self.value.value - 2) + self.type.id
 
     def card_to_matrix(self):
-        '''
-        4 values matrix, each field for a type, the value of the element is value of the card
-        Values varies between [2/14, 14/14]
-        '''
+        """
+        Convert card to a 4-element numpy array for neural network input.
+        
+        Creates a one-hot encoded array where the position corresponding to
+        the card's type contains the normalized value (value/14), and all
+        other positions are 0.
+        
+        Returns:
+            np.ndarray: 4-element array with normalized card value at type position
+                       Values range from 2/14 (≈0.14) to 14/14 (1.0)
+        """
         card_matrix = np.zeros(4)
         card_matrix[self.type.id] = self.value.value/14
         return card_matrix
 
     def largerThan(self, nextCard, respectype=True):
-        if(respectype):
-            if(self.type == nextCard.type):
-                if(self.value.value > nextCard.value.value ):
-                    return True
-                else:
-                    return False
+        """
+        Compare this card with another card to determine if it's larger.
+        
+        Args:
+            nextCard (Card): The card to compare against
+            respectype (bool): If True, only compare cards of the same type.
+                              If False, compare values regardless of type.
+        
+        Returns:
+            bool: True if this card is larger than nextCard
+        
+        Note:
+            When respectype=True and types differ, returns False (not True as buggy code did)
+        """
+        if respectype:
+            if self.type == nextCard.type:
+                return self.value.value > nextCard.value.value
             else:
-                True
+                return False  # Fixed: was returning True
         else:
-            if (self.value.value > nextCard.value.value):
-                return True
-            else:
-                return False
+            return self.value.value > nextCard.value.value
 

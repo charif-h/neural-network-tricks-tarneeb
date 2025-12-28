@@ -1,0 +1,17 @@
+# Core dependencies for neural-network-tricks-tarneeb
+# Python 3.8+ required
+
+# Neural network and machine learning
+numpy>=1.21.0,<2.0.0
+tensorflow>=2.8.0,<3.0.0
+keras>=2.8.0,<3.0.0
+
+# Utilities
+termcolor>=1.1.0
+
+# Development dependencies (optional)
+# Uncomment for development
+# pytest>=7.0.0
+# pylint>=2.12.0
+# black>=22.0.0
+# mypy>=0.931
