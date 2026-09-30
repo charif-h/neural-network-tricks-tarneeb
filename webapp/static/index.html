@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trump Table</title>
+<style>
+  :root {
+    --felt: #1d6b46; --felt-dark: #124a2f; --ink: #1c1c1c; --card: #fdfcf8;
+    --red: #c62828; --gold: #f4c542; --panel: #14181d; --panel-2: #1d232b; --text: #e8ecef; --muted: #8b96a1;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--panel); color: var(--text); font: 15px/1.4 system-ui, sans-serif; }
+  #app { display: grid; grid-template-columns: 1fr 300px; min-height: 100vh; }
+  @media (max-width: 900px) { #app { grid-template-columns: 1fr; } }
+
+  .table { background: radial-gradient(ellipse at center, var(--felt) 0%, var(--felt-dark) 100%);
+           display: grid; grid-template-rows: auto 1fr auto; padding: 12px 16px; gap: 8px; min-height: 100vh; }
+  .topbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .controls label { background: rgba(0,0,0,.35); padding: 6px 12px; border-radius: 999px; font-size: 13px; }
+  .controls input { vertical-align: middle; width: 110px; }
+  .seat .shown { display: flex; flex-wrap: wrap; justify-content: center; gap: 2px; margin-top: 6px; }
+  .seat .shown .card { width: 26px; height: 38px; font-size: 11px; box-shadow: 0 1px 2px rgba(0,0,0,.5); }
+  .seat .shown .card small { font-size: 11px; }
+  .trump { background: rgba(0,0,0,.35); padding: 6px 12px; border-radius: 999px; }
+  .trump b { font-size: 20px; vertical-align: middle; }
+  button { font: inherit; cursor: pointer; border: 0; border-radius: 8px; padding: 8px 14px; background: var(--gold); color: #222; font-weight: 600; }
+  button.ghost { background: rgba(255,255,255,.15); color: var(--text); }
+  button:disabled { opacity: .35; cursor: not-allowed; }
+
+  .arena { display: grid; grid-template: "n n n" auto "w c e" 1fr / 150px 1fr 150px; gap: 8px; align-items: center; }
+  .seat { background: rgba(0,0,0,.3); border-radius: 12px; padding: 10px; text-align: center; border: 2px solid transparent; }
+  .seat.turn { border-color: var(--gold); box-shadow: 0 0 14px rgba(244,197,66,.5); }
+  .seat h3 { margin: 0 0 4px; font-size: 15px; }
+  .seat .meta { font-size: 13px; color: #cfe3d8; }
+  .seat.n { grid-area: n; justify-self: center; min-width: 220px; }
+  .seat.w { grid-area: w; } .seat.e { grid-area: e; }
+  .badge { display: inline-block; background: var(--gold); color: #222; border-radius: 6px; padding: 0 6px; font-weight: 700; font-size: 12px; margin-left: 4px; }
+  .backs { display: flex; justify-content: center; margin-top: 6px; min-height: 30px; }
+  .backs i { width: 16px; height: 26px; margin-left: -8px; border-radius: 3px; background: repeating-linear-gradient(45deg,#2b4fa8,#2b4fa8 3px,#1e3a80 3px,#1e3a80 6px); border: 1px solid #fff8; }
+
+  .center { grid-area: c; position: relative; min-height: 240px; }
+  .center .slot { position: absolute; transform: translate(-50%,-50%); }
+  .slot.s0 { left: 50%; top: 82%; } .slot.s3 { left: 22%; top: 50%; } .slot.s2 { left: 50%; top: 18%; } .slot.s1 { left: 78%; top: 50%; }
+  .slot.win .card { outline: 3px solid var(--gold); }
+  .status { text-align: center; min-height: 26px; font-size: 16px; }
+
+  .card { width: 58px; height: 84px; background: var(--card); color: var(--ink); border-radius: 7px; display: inline-flex; flex-direction: column;
+          align-items: center; justify-content: center; font-weight: 700; font-size: 20px; line-height: 1.05; box-shadow: 0 2px 5px rgba(0,0,0,.45); user-select: none; }
+  .card.red { color: var(--red); }
+  .card small { font-size: 22px; }
+  .card.trump { box-shadow: 0 0 0 2px var(--gold), 0 2px 5px rgba(0,0,0,.45); }
+  .hand { display: flex; justify-content: center; flex-wrap: wrap; gap: 4px; padding: 6px; min-height: 100px; }
+  .hand .card { width: 62px; height: 90px; transition: transform .1s; }
+  .hand .card.legal { cursor: pointer; }
+  .hand .card.legal:hover { transform: translateY(-12px); }
+  .hand .card.dim { opacity: .45; }
+  .hand .gap { width: 10px; }
+
+  .bid-panel { background: rgba(0,0,0,.4); border-radius: 12px; padding: 10px; text-align: center; }
+  .bid-panel .row { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-top: 6px; }
+  .bid-panel button { min-width: 42px; }
+
+  aside { background: var(--panel-2); padding: 14px; overflow-y: auto; max-height: 100vh; }
+  aside h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 14px 0 6px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { padding: 3px 4px; text-align: right; } th:first-child, td:first-child { text-align: left; }
+  th { color: var(--muted); font-weight: 500; }
+  tr.team-us td:first-child { color: #7fd6a0; } tr.team-them td:first-child { color: #ff9a8b; }
+  #log { font-size: 13px; color: #c5ced6; max-height: 320px; overflow-y: auto; }
+  #log div { padding: 1px 0; }
+
+  .modal { position: fixed; inset: 0; background: rgba(0,0,0,.65); display: none; align-items: center; justify-content: center; padding: 16px; z-index: 5; }
+  .modal.show { display: flex; }
+  .modal .box { background: var(--panel-2); border-radius: 14px; padding: 18px; max-width: 760px; width: 100%; max-height: 92vh; overflow-y: auto; }
+  .modal h2 { margin-top: 0; }
+  .reveal { display: flex; flex-wrap: wrap; gap: 3px; margin: 2px 0 10px; }
+  .reveal .card { width: 34px; height: 48px; font-size: 13px; }
+  .reveal .card small { font-size: 13px; }
+  .good { color: #7fd6a0; } .bad { color: #ff9a8b; }
+  #toast { position: fixed; bottom: 14px; left: 50%; transform: translateX(-50%); background: #b71c1c; color: #fff; padding: 8px 14px; border-radius: 8px; display: none; z-index: 9; }
+</style>
+</head>
+<body>
+<div id="app">
+  <main class="table">
+    <div class="topbar">
+      <div><span class="trump">Trump: <b id="trump">–</b></span> <span id="roundlbl" style="margin-left:10px"></span></div>
+      <div class="controls">
+        <label title="0 = AI always plays its best move, 1 = AI plays completely at random">AI randomness
+          <input type="range" id="rand" min="0" max="1" step="0.05" value="0"> <b id="randval">0.00</b></label>
+        <button class="ghost" id="reveal">Reveal hands</button>
+        <button class="ghost" id="statsbtn">Stats</button>
+        <button class="ghost" id="newgame">New game</button>
+      </div>
+    </div>
+    <div>
+      <div class="arena">
+        <div class="seat n" id="seat2"></div>
+        <div class="seat w" id="seat3"></div>
+        <div class="center" id="center"></div>
+        <div class="seat e" id="seat1"></div>
+      </div>
+      <div class="status" id="status"></div>
+    </div>
+    <div>
+      <div class="bid-panel" id="bidpanel" hidden></div>
+      <div class="seat turn-wrap" id="seat0" style="margin:6px auto;max-width:360px"></div>
+      <div class="hand" id="hand"></div>
+    </div>
+  </main>
+  <aside>
+    <h2>Scores (41 to win)</h2>
+    <table id="scores"></table>
+    <p style="color:var(--muted);font-size:12px">Teams: <span class="good">You + Partner</span> vs <span class="bad">West + East</span>.
+      A player scores their bid if they take at least that many tricks, otherwise loses it (bids 7-12 count double, 13 triple).</p>
+    <h2>Log</h2>
+    <div id="log"></div>
+  </aside>
+</div>
+
+<div class="modal" id="statsmodal"><div class="box" id="statsbox"></div></div>
+<div class="modal" id="modal"><div class="box" id="modalbox"></div></div>
+<div id="toast"></div>
+
+<script>
+const SYM = { clubs: '♣', diamonds: '♦', spades: '♠', hearts: '♥' };
+const RED = new Set(['diamonds', 'hearts']);
+let state = null, lastVersion = -1;
+
+const $ = id => document.getElementById(id);
+async function api(path, body) {
+  const r = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) });
+  const j = await r.json();
+  if (!j.ok && j.error) toast(j.error);
+  return j;
+}
+function toast(msg) { const t = $('toast'); t.textContent = msg; t.style.display = 'block'; setTimeout(() => t.style.display = 'none', 2000); }
+
+function cardEl(c, opts = {}) {
+  const d = document.createElement('div');
+  d.className = 'card' + (RED.has(c.suit) ? ' red' : '') + (state && c.suit === state.trump ? ' trump' : '');
+  d.innerHTML = `<span>${c.rank}</span><small>${SYM[c.suit]}</small>`;
+  return d;
+}
+
+function seatHtml(i, s, st) {
+  const dealer = st.dealer === i ? '<span class="badge">D</span>' : '';
+  const bid = s.bid ? `bid <b>${s.bid}</b>` : 'no bid';
+  return `<h3>${s.name}${dealer}</h3><div class="meta">${bid} · tricks <b>${s.tricks}</b> · score <b>${s.score}</b></div>` +
+         (i === 0 ? '' : st.other_hands ? `<div class="shown">${st.other_hands[i].map(c => cardEl(c).outerHTML).join('')}</div>`
+                        : `<div class="backs">${'<i></i>'.repeat(s.cards)}</div>`);
+}
+
+function render(st) {
+  state = st;
+  $('trump').innerHTML = st.trump ? `<span style="color:${RED.has(st.trump) ? '#ff6b6b' : '#fff'}">${SYM[st.trump]}</span> ${st.trump}` : '–';
+  $('roundlbl').textContent = st.round ? `Round ${st.round}` : '';
+
+  st.seats.forEach((s, i) => {
+    const el = $('seat' + i);
+    el.innerHTML = seatHtml(i, s, st);
+    el.classList.toggle('turn', st.turn === i);
+  });
+
+  // trick
+  const center = $('center'); center.innerHTML = '';
+  st.trick.forEach(t => {
+    const slot = document.createElement('div');
+    slot.className = `slot s${t.seat}` + (st.trick_winner === t.seat ? ' win' : '');
+    slot.appendChild(cardEl(t.card));
+    center.appendChild(slot);
+  });
+
+  // hand
+  const hand = $('hand'); hand.innerHTML = '';
+  let prev = null;
+  st.hand.forEach(c => {
+    if (prev && prev !== c.suit) { const g = document.createElement('span'); g.className = 'gap'; hand.appendChild(g); }
+    prev = c.suit;
+    const el = cardEl(c);
+    if (st.awaiting === 'card') {
+      if (st.legal.includes(c.id)) { el.classList.add('legal'); el.onclick = () => api('/api/card', { value: c.id }); }
+      else el.classList.add('dim');
+    }
+    hand.appendChild(el);
+  });
+
+  // status + bid panel
+  const bp = $('bidpanel');
+  bp.hidden = st.awaiting !== 'bid';
+  if (st.awaiting === 'bid') {
+    const seatsBid = st.seats.map(s => s.bid ? `${s.name}: ${s.bid}` : null).filter(Boolean).join(' · ');
+    let btns = '';
+    for (let b = 2; b <= 13; b++) btns += `<button data-b="${b}" ${b < st.min_bid ? 'disabled' : ''}>${b}</button>`;
+    bp.innerHTML = `<div><b>Your bid</b> — how many tricks will you take? <span style="color:#cfe3d8">${seatsBid ? '(' + seatsBid + ')' : ''}</span></div><div class="row">${btns}</div>`;
+    bp.querySelectorAll('button').forEach(b => b.onclick = () => api('/api/bid', { value: +b.dataset.b }));
+  }
+  let status = '';
+  if (st.awaiting === 'bid') status = 'Your turn to bid';
+  else if (st.awaiting === 'card') status = st.trick.length ? 'Your turn — follow suit if you can' : 'Your lead';
+  else if (st.phase === 'bidding') status = st.turn !== null ? `${st.seats[st.turn].name} is bidding…` : 'Bidding complete';
+  else if (st.phase === 'playing') status = st.trick_winner !== null && st.trick_winner !== undefined ? `${st.seats[st.trick_winner].name} wins the trick` : (st.turn !== null ? `${st.seats[st.turn].name} is thinking…` : '');
+  $('status').textContent = status;
+
+  // sidebar
+  const order = [[0, 'us'], [2, 'us'], [1, 'them'], [3, 'them']];
+  $('scores').innerHTML = '<tr><th></th><th>Bid</th><th>Won</th><th>Score</th></tr>' +
+    order.map(([i, t]) => `<tr class="team-${t}"><td>${st.seats[i].name}</td><td>${st.seats[i].bid || '–'}</td><td>${st.seats[i].tricks}</td><td><b>${st.seats[i].score}</b></td></tr>`).join('');
+  const log = $('log'); const atEnd = log.scrollTop + log.clientHeight >= log.scrollHeight - 20;
+  log.innerHTML = st.log.map(l => `<div>${l}</div>`).join('');
+  if (atEnd) log.scrollTop = log.scrollHeight;
+
+  $('reveal').textContent = st.reveal ? 'Hide hands' : 'Reveal hands';
+  if (document.activeElement !== $('rand')) { $('rand').value = st.randomness; $('randval').textContent = st.randomness.toFixed(2); }
+  renderModal(st);
+}
+
+function renderModal(st) {
+  const m = $('modal');
+  if (!st.summary) { m.classList.remove('show'); return; }
+  const s = st.summary;
+  const teamUs = s.seats[0].delta + s.seats[2].delta, teamThem = s.seats[1].delta + s.seats[3].delta;
+  const rows = [0, 2, 1, 3].map(i => {
+    const x = s.seats[i], ok = x.tricks >= x.bid;
+    return `<tr class="team-${i % 2 ? 'them' : 'us'}"><td>${x.name}</td><td>${x.bid}</td><td>${x.tricks}</td><td class="${ok ? 'good' : 'bad'}">${x.delta > 0 ? '+' : ''}${x.delta}</td><td><b>${x.score}</b></td></tr>` +
+           `<tr><td colspan="5"><div class="reveal">${x.hand.map(c => cardEl(c).outerHTML).join('')}</div></td></tr>`;
+  }).join('');
+  let title = s.over ? (s.winner === 'us' ? '🏆 You and your partner win!' : 'Game over — the opponents win') : 'Round complete';
+  m.querySelector('#modalbox').innerHTML = `<h2>${title}</h2>
+    <p>This round: you + partner <b class="${teamUs >= 0 ? 'good' : 'bad'}">${teamUs > 0 ? '+' : ''}${teamUs}</b>, opponents <b class="${teamThem >= 0 ? 'good' : 'bad'}">${teamThem > 0 ? '+' : ''}${teamThem}</b>. Hands as dealt are shown below.</p>
+    <table><tr><th></th><th>Bid</th><th>Won</th><th>Δ</th><th>Score</th></tr>${rows}</table>
+    <p style="text-align:right"><button id="next">${s.over ? 'New game' : 'Next round'}</button></p>`;
+  $('next').onclick = () => s.over ? api('/api/new_game') : api('/api/ack');
+  m.classList.add('show');
+}
+
+async function poll() {
+  try {
+    const st = await (await fetch('/api/state')).json();
+    if (st.version !== lastVersion) { lastVersion = st.version; render(st); }
+  } catch (e) { /* server restarting */ }
+  setTimeout(poll, 300);
+}
+$('rand').oninput = () => { $('randval').textContent = (+$('rand').value).toFixed(2); };
+$('rand').onchange = () => api('/api/settings', { randomness: +$('rand').value });
+$('reveal').onclick = () => api('/api/settings', { reveal: !state.reveal });
+
+const f1 = v => v === null ? '–' : v.toFixed(1), pct = v => v === null ? '–' : v.toFixed(0) + '%';
+async function showStats() {
+  const s = await (await fetch('/api/stats')).json();
+  const names = ['You', 'Partner', 'East', 'West'], idx = [0, 2, 1, 3];
+  const rows = idx.map((i, k) => { const x = s.seats[i];
+    return `<tr class="team-${i % 2 ? 'them' : 'us'}"><td>${names[k]}</td><td>${f1(x.avg_bid)}</td><td>${f1(x.avg_tricks)}</td><td>${pct(x.made_pct)}</td><td>${pct(x.over_pct)}</td><td>${pct(x.under_pct)}</td><td>${f1(x.avg_points)}</td></tr>`; }).join('');
+  $('statsbox').innerHTML = `<h2>Statistics</h2>
+    <p>Games won by you + partner: <b>${s.games_won} / ${s.games}</b> (${s.games ? Math.round(100 * s.games_won / s.games) : '–'}%) · Rounds played: <b>${s.rounds}</b><br>
+    Total round points: you + partner <b>${s.team_points[0]}</b>, opponents <b>${s.team_points[1]}</b></p>
+    <table><tr><th></th><th>Avg bid</th><th>Avg tricks</th><th>Bid made</th><th>Overbid</th><th>Underbid</th><th>Pts/round</th></tr>${rows}</table>
+    <p style="color:var(--muted);font-size:12px">Overbid = failed the bid; Underbid = won more tricks than bid. Stats accumulate across games (all AI-randomness settings mixed together) and are saved in webapp/stats.json. Only completed rounds count.</p>
+    <p style="text-align:right"><button class="ghost" id="resetstats">Reset stats</button> <button id="closestats">Close</button></p>`;
+  $('closestats').onclick = () => $('statsmodal').classList.remove('show');
+  $('resetstats').onclick = async () => { if (confirm('Erase all statistics?')) { await api('/api/reset_stats'); showStats(); } };
+  $('statsmodal').classList.add('show');
+}
+$('statsbtn').onclick = showStats;
+$('newgame').onclick = () => { if (confirm('Abandon this game and start a new one?')) api('/api/new_game'); };
+poll();
+</script>
+</body>
+</html>

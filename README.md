@@ -118,3 +118,13 @@ This project is open source and available for educational purposes.
 ## Acknowledgments
 
 This project was created to explore reinforcement learning and neural networks in the context of traditional card games.
+
+## Play against the Trump AI (web interface)
+
+Play as South with an AI partner against two AI opponents, using the trained networks in `Trump/models/`:
+
+```
+.venv\Scripts\python -m webapp.server        # opens http://127.0.0.1:8000
+```
+
+No extra dependencies (standard-library HTTP server + plain HTML/JS).
