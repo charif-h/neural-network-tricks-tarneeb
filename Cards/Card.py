@@ -9,11 +9,11 @@ from enum import Enum
 import numpy as np
 
 
-class CardType(Enum):
+class CardSuite(Enum):
     """
     Enumeration representing the four card types (suits) in a standard deck.
     
-    Each type has an ID (0-3) and a symbol (♣, ♦, ♠, ♥).
+    Each suite has an ID (0-3) and a symbol (♣, ♦, ♠, ♥).
     """
     CLUB = 0, "♣"
     DIAMOND = 1, "♦"
@@ -29,7 +29,7 @@ class CardType(Enum):
     def __int__(self):
         return self.id
 
-class CardValue(Enum):
+class CardRank(Enum):
     """
     Enumeration representing the values of cards in a standard deck.
     
@@ -54,45 +54,47 @@ class Card:
     Represents a playing card with a value and type (suit).
     
     Attributes:
-        value (CardValue): The value of the card (2-14, where 14 is Ace)
+        value (CardRank): The value of the card (2-14, where 14 is Ace)
         type (CardType): The type/suit of the card (CLUB, DIAMOND, SPADE, HEART)
     """
     
-    def __init__(self, value, type):
+    def __init__(self, rank, suite):
         """
         Initialize a Card with a value and type.
         
         Args:
-            value (CardValue): The value of the card
-            type (CardType): The type/suit of the card
+            rank (CardRank): The value of the card
+            suite (CardSuite): The suite of the card
         """
-        self.value = value
-        self.type = type
+        self.rank = rank
+        self.suite = suite
     def __str__(self):
-        return str(self.valueChar()) + self.type.value
-        #return str(self.value)[10:] + " of " + str(self.type)[9:] + "S"
+        return str(self.rankChar()) + self.suite.value
+
     def __repr__(self):
-        return str(self.valueChar()) + "-" + self.type.value
+        return str(self.rankChar()) + "-" + self.suite.value
 
     def __hash__(self):
-        return hash(str(self.type) + str(self.value))
+        return hash((self.suite, self.rank))
 
     def __eq__(self, other):
-        return self.value == other.value and self.type == other.type
+        if not isinstance(other, Card):
+            return NotImplemented
+        return self.rank == other.rank and self.suite == other.suite
 
     def __lt__(self, other):
-        if self.type.value == other.type.value:
-            return self.value.value < other.value.value
-        return self.type.value < other.type.value
+        if self.suite.value == other.suite.value:
+            return self.rank.value < other.rank.value
+        return self.suite.value < other.suite.value
 
-    def valueChar(self):
-        if(self.value.value <= 10):
-            return self.value.value
+    def rankChar(self):
+        if(self.rank.value <= 10):
+            return self.rank.value
         else:
-            return str(self.value)[str(self.value).index(".") + 1]
+            return str(self.rank)[str(self.rank).index(".") + 1]
 
     def cardId(self):
-        return  4*(self.value.value - 2) + self.type.id
+        return  4*(self.rank.value - 2) + self.suite.id
 
     def card_to_matrix(self):
         """
@@ -107,7 +109,7 @@ class Card:
                        Values range from 2/14 (≈0.14) to 14/14 (1.0)
         """
         card_matrix = np.zeros(4)
-        card_matrix[self.type.id] = self.value.value/14
+        card_matrix[self.suite.id] = self.rank.value/14
         return card_matrix
 
     def largerThan(self, nextCard, respectype=True):
@@ -126,10 +128,10 @@ class Card:
             When respectype=True and types differ, returns False (not True as buggy code did)
         """
         if respectype:
-            if self.type == nextCard.type:
-                return self.value.value > nextCard.value.value
+            if self.suite == nextCard.suite:
+                return self.rank.value > nextCard.rank.value
             else:
                 return False  # Fixed: was returning True
         else:
-            return self.value.value > nextCard.value.value
+            return self.rank.value > nextCard.rank.value
 

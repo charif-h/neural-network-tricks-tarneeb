@@ -28,7 +28,7 @@ MAX_CARD_VALUE = 14  # Highest card value (Ace)
 
 # Neural network input dimensions
 BIDDING_INPUT_DIM = 64  # Input dimension for bidding model
-# Composition: 52 (hand) + 4 (scores) + 4 (biddings) + 4 (tarneeb)
+# Composition: 52 (hand) + 4 (scores) + 4 (biddings) + 4 (trump)
 
 PLAYING_INPUT_DIM = 68  # Input dimension for playing model
 # Composition: 4 (player context) + 52 (hand) + 12 (played cards)

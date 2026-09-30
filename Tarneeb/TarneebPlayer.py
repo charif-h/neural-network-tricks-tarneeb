@@ -49,7 +49,7 @@ class TarneebPlayer(Player.Player):
         self.history = np.zeros((52, 68))
         Player.Player.__init__(self, str(name))
 
-    def bid(self, scores=[0, 0, 0, 0], biddings=[2, 2, 2, 2], tarneeb=[0, 0, 0, 0]):
+    def bid(self, scores=[0, 0, 0, 0], biddings=[2, 2, 2, 2], trump=[0, 0, 0, 0]):
         """
         Make a bidding decision using the neural network.
         
@@ -57,12 +57,12 @@ class TarneebPlayer(Player.Player):
         - Player's hand strength
         - Current scores of all players
         - Other players' bids (if known)
-        - The tarneeb (trump) suit
+        - The trump suit
         
         Args:
             scores (list): Scaled scores of all players [0-1]
             biddings (list): Bids of other players (scaled by 13)
-            tarneeb (list): One-hot encoded tarneeb type
+            trump (list): One-hot encoded trump type
         
         Returns:
             int: Number of tricks bid (2-13)
@@ -88,7 +88,7 @@ class TarneebPlayer(Player.Player):
             int: Points to add/subtract from score (negative if bid not met)
         """
         self.hand.sort(reverse=True)
-        inp = np.concatenate((self.handToArray(), scores, biddings, tarneeb))
+        inp = np.concatenate((self.handToArray(), scores, biddings, trump))
         self.bidding_input = inp.reshape(1, 64)
         o = self.biddingModel.predict(x=np.array(self.bidding_input))
         
@@ -154,7 +154,7 @@ class TarneebPlayer(Player.Player):
         self.biddingModel.fit(X, Y, verbose=0, batch_size=4)
 
     def playCard(self, sdcards, scores=[0, 0, 0, 0], bids=[2, 2, 2, 2], 
-                 tours=[0, 0, 0, 0], Tarneeb=[0, 0, 0, 0], *args, **kwargs):
+                 tours=[0, 0, 0, 0], trump=[0, 0, 0, 0], *args, **kwargs):
         """
         Play a card following game rules.
         
@@ -175,7 +175,7 @@ class TarneebPlayer(Player.Player):
             scores (list): Player scores (scaled)
             bids (list): Player bids (scaled)
             tours (list): Turns won by each player
-            Tarneeb (list): Tarneeb type encoding
+            trump (list): Trump type encoding
             *args, **kwargs: Additional arguments
         
         Returns:
@@ -232,15 +232,15 @@ class TarneebPlayer(Player.Player):
     def play(self, input):
         print(self.playModel.predict(input))
 
-    def playModelInput(self, turns, scores=[0, 0, 0, 0], biddings=[2, 2, 2, 2], tarneeb=[0, 0, 0, 0], my_id = 0):
+    def playModelInput(self, turns, scores=[0, 0, 0, 0], biddings=[2, 2, 2, 2], trump=[0, 0, 0, 0], my_id = 0):
         scaled_biddings = np.roll(np.array(biddings)/13, my_id)
         scaled_scores = np.roll(np.array(scores)/41, my_id)
-        #Tarneeb
+        #Trump
         hand = self.hand
         #played_cards = 3 cards
         #starting_type
 
 
-        current_input = np.concatenate((tarneeb))
+        current_input = np.concatenate((trump))
 
 

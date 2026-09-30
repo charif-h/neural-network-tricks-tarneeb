@@ -13,26 +13,26 @@ class Turn():
     Represents a single turn (trick) in a Tarneeb game.
     
     A turn consists of 4 players each playing one card, with one player
-    winning based on card values and the tarneeb (trump) suit.
+    winning based on card values and the trump suit.
     
     Attributes:
         serial (int): The turn number in the round (1-13)
         starting_player_id (int): ID of the player who led this turn
         played_cards (list): List of 4 Card objects played in order
-        tarneeb (CardType): The trump suit for this round
+        trump (CardType): The trump suit for this round
         winCard (Card): The card that won this turn
         winnerId (int): ID of the player who won this turn
         winCardId (int): Index of winning card in played_cards
         loss (dict): Loss values for each card (for training)
     """
     
-    def __init__(self, cards, tarneeb, serial=1, starting_player_id=0):
+    def __init__(self, cards, trump, serial=1, starting_player_id=0):
         """
         Initialize a Turn with played cards and game state.
         
         Args:
             cards (list): List of 4 Card objects played in this turn
-            tarneeb (CardType): The trump suit for this round
+            trump (CardType): The trump suit for this round
             serial (int): Turn number in the round (default: 1)
             starting_player_id (int): ID of player who led (default: 0)
         """
@@ -40,22 +40,22 @@ class Turn():
         self.starting_player_id = starting_player_id
         self.played_cards = cards
         self.loss = {}
-        self.tarneeb = tarneeb
-        self.winner(self.tarneeb)
+        self.trump = trump
+        self.winner(self.trump)
         self.playing_loss_function()
 
 
-    def winner(self, tarneeb):
+    def winner(self, trump):
         """
         Determine the winning card and player for this turn.
         
         The winner is determined by:
-        1. Tarneeb (trump) cards beat all non-tarneeb cards
+        1. Trump cards beat all non-trump cards
         2. Among cards of the same type, higher value wins
         3. First card played sets the "lead" type
         
         Args:
-            tarneeb (CardType): The trump suit for this round
+            trump (CardType): The trump suit for this round
         """
         player_cards = '['
         for i, c in enumerate(self.played_cards):
@@ -81,7 +81,7 @@ class Turn():
             card = self.played_cards[i]
             # Check if this card beats the current winner
             if (card.largerThan(self.winCard) or 
-                (card.type == tarneeb and self.winCard.type != tarneeb)):
+                (card.type == trump and self.winCard.type != trump)):
                 self.winCard = card
                 self.winCardId = i
                 self.winnerId = (i + self.starting_player_id) % 4
@@ -91,7 +91,7 @@ class Turn():
         - Bidding: scaled (1 value)
         - score: scaled (1 value)
         - won turns: percentage of bidding (1 value)
-        - tarneeb!: (4 value) #TODO : need to convert the 1 value (is tarneeb) to 4 values.
+        - trump!: (4 value) #TODO : need to convert the 1 value (is trump) to 4 values.
         - player hand cards (13*4 values), each card is 4 values (zeros otherwise)
         - already played cards in this turn (4*3), we can have up to 3 played cards
 
@@ -104,12 +104,12 @@ class Turn():
         for i, c in enumerate(self.played_cards):
             player_id = (self.starting_player_id + i) % 4
             
-            # Player context: bidding, score, won turns ratio, is tarneeb
+            # Player context: bidding, score, won turns ratio, is trump
             pc_matrix = np.array([
                 players[player_id].bidding / 13,
                 players[player_id].score / 41,
                 players[player_id].number_of_won_turns / players[player_id].bidding,
-                c.type == self.tarneeb
+                c.type == self.trump
             ])
 
             # Player's hand representation (13 cards * 4 values each)
@@ -133,7 +133,7 @@ class Turn():
         Calculate loss values for each card played in this turn.
         
         Uses probability-based loss functions where cards are assigned
-        expected win probabilities based on their value. Tarneeb cards
+        expected win probabilities based on their value. Trump cards
         have higher win probabilities.
         
         The winning card's loss is adjusted based on the difference between
@@ -149,8 +149,8 @@ class Turn():
             10: 0.206, 11: 0.28, 12: 0.38, 13: 0.5, 14: 0.65
         }
         
-        # Win probabilities for tarneeb (trump) cards - higher than regular
-        tarneeb_win_prob = {
+        # Win probabilities for trump cards - higher than regular
+        trump_win_prob = {
             2: 0.175, 3: 0.185, 4: 0.205, 5: 0.223,
             6: 0.257, 7: 0.3, 8: 0.34, 9: 0.41,
             10: 0.47, 11: 0.58, 12: 0.7, 13: 0.85, 14: 1.00
@@ -158,11 +158,11 @@ class Turn():
 
         # Assign base loss to each card
         for c in self.played_cards:
-            if c.type == self.tarneeb:
-                self.loss[c] = tarneeb_win_prob[c.value.value]
+            if c.type == self.trump:
+                self.loss[c] = trump_win_prob[c.value.value]
             else:
                 self.loss[c] = card_win_prob[c.value.value]
 
         # Adjust winning card's loss based on comparison with other cards
         self.loss[self.winCard] = (4 * self.loss[self.winCard] - sum(self.loss.values())) * 0.01
-        print('turn analysis ', self.tarneeb.value, self.played_cards, self.winCard, self.loss)
+        print('turn analysis ', self.trump.value, self.played_cards, self.winCard, self.loss)

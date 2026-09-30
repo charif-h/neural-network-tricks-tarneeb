@@ -29,7 +29,7 @@ logging.basicConfig(level=logging.INFO)
 
 
 # Game >> Round >> Turn
-def distripute_and_bid(players, tarneeb):
+def distripute_and_bid(players, trump):
     """
     Distribute cards to players and collect their bids.
     
@@ -42,7 +42,7 @@ def distripute_and_bid(players, tarneeb):
     
     Args:
         players (list): List of 4 TarneebPlayer objects
-        tarneeb (CardType): The trump suit for this round
+        trump (CardType): The trump suit for this round
     
     Returns:
         float: Sum of all player bids
@@ -55,12 +55,12 @@ def distripute_and_bid(players, tarneeb):
     
     bids = np.zeros(4)
     tbs = np.zeros(4)
-    tbs[tarneeb.id] = 1
+    tbs[trump.id] = 1
     
     # Each player receives cards and makes a bid
     for i in range(4):
         players[i].setHand(standardeck.distripute(13))
-        players[i].bid(scores=scaled_scores, biddings=bids, tarneeb=tbs)
+        players[i].bid(scores=scaled_scores, biddings=bids, trump=tbs)
         bids[i] = players[i].bidding
         logging.info(players[i].name + ' bid=' + str(players[i].bidding) + 
                     ' on hand ' + str(players[i].hand))
@@ -68,18 +68,18 @@ def distripute_and_bid(players, tarneeb):
     return bids.sum()
 
 
-def tarneeb_to_array(tarneeb):
+def trump_to_array(trump):
     """
-    Convert tarneeb type to one-hot encoded array.
+    Convert trump type to one-hot encoded array.
     
     Args:
-        tarneeb (CardType): The trump suit
+        trump (CardType): The trump suit
     
     Returns:
         np.ndarray: 4-element one-hot encoded array
     """
     tbs = np.zeros(4)
-    tbs[tarneeb.id] = 1
+    tbs[trump.id] = 1
     return tbs
 
 
@@ -91,13 +91,13 @@ def clearHands(players):
         players (list): List of TarneebPlayer objects
     """
     standardeck = StandarDeck(shuffled=True)
-    tarneeb = standardeck.cards[51].type
+    trump = standardeck.cards[51].type
     for p in players:
         p.prediction = 2
         p.clearHand()
 
 
-def playRound(players, tarneeb):
+def playRound(players, trump):
     """
     Play a complete round of 13 turns.
     
@@ -106,7 +106,7 @@ def playRound(players, tarneeb):
     
     Args:
         players (list): List of 4 TarneebPlayer objects
-        tarneeb (CardType): The trump suit for this round
+        trump (CardType): The trump suit for this round
     
     Returns:
         list: List of Turn objects representing all turns played
@@ -128,7 +128,7 @@ def playRound(players, tarneeb):
 
         # Create turn object and determine winner
         turn = Turn(current_turn_cards, serial=j, 
-                   starting_player_id=starter_player, tarneeb=tarneeb)
+                   starting_player_id=starter_player, trump=trump)
         starter_player = turn.winnerId  # Winner leads next turn
 
         # Record card statistics for analysis
@@ -136,7 +136,7 @@ def playRound(players, tarneeb):
             k = str(c.value.value)
             if c == turn.winCard:
                 k += '-W'
-            if c.type == tarneeb:
+            if c.type == trump:
                 k = 'T-' + k
             if k in cards_record.keys():
                 cards_record[k] += 1
@@ -267,15 +267,15 @@ for z in range(NUMBER_OF_TRAINING_GAMES):
         
         while bidding_sum < 11:
             standardeck = StandarDeck(shuffled=True)
-            tarneeb = standardeck.cards[51].type
+            trump = standardeck.cards[51].type
             clearHands(players)
-            bidding_sum = distripute_and_bid(players, tarneeb)
+            bidding_sum = distripute_and_bid(players, trump)
         
-        logging.info('The tarneeb is: ' + str(tarneeb) + 
+        logging.info('The trump is: ' + str(trump) + 
                     ' sum of bidding: ' + str(bidding_sum))
         
         # Play the round
-        turns = playRound(players, tarneeb)
+        turns = playRound(players, trump)
         print(players)
         
         # Process round results and train models

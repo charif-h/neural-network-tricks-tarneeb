@@ -6,8 +6,12 @@ numpy>=1.21.0,<2.0.0
 tensorflow>=2.8.0,<3.0.0
 keras>=2.8.0,<3.0.0
 
+# PyTorch: added manually so not sure of the correct syntax for version ranges
+torch==2.14.0
+
 # Utilities
 termcolor>=1.1.0
+tqdm>=4.65.0
 
 # Development dependencies (optional)
 # Uncomment for development
