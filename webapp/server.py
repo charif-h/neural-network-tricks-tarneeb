@@ -36,7 +36,7 @@ class Handler(BaseHTTPRequestHandler):
         if self.path.startswith('/api/state'):
             self._send(200, session.snapshot())
         elif self.path == '/api/stats':
-            self._send(200, session.stats.report())
+            self._send(200, session.stats_report())
         elif self.path in ('/', '/index.html'):
             with open(os.path.join(STATIC_DIR, 'index.html'), 'rb') as f:
                 self._send(200, f.read(), 'text/html; charset=utf-8')
@@ -52,6 +52,9 @@ class Handler(BaseHTTPRequestHandler):
         elif self.path == '/api/settings':
             session.update_settings(body.get('randomness'), body.get('reveal'))
             self._send(200, {'ok': True})
+        elif self.path == '/api/model':
+            ok, error = session.set_model(body.get('model'))
+            self._send(200 if ok else 400, {'ok': ok, 'error': error})
         elif self.path == '/api/reset_stats':
             session.stats.reset()
             self._send(200, {'ok': True})

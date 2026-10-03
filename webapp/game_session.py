@@ -14,14 +14,39 @@ import os
 import random
 import threading
 
-from Trump.BiddingNet import order_suits
+from Trump.BiddingNet import BiddingNet, order_suits
+from Trump.PlayingNet import PlayingNet
 from Trump.TrumpGame import TrumpGame
 from Trump.TrumpPlayer import TrumpPlayer
-from webapp.stats import Stats
+from webapp.stats import Stats, stats_path
 
-MODELS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'Trump', 'models')
-BID_MODEL_PATH = os.path.join(MODELS_DIR, 'bidding_net.pt')
-PLAYING_MODEL_PATH = os.path.join(MODELS_DIR, 'playing_net.pt')
+TRUMP_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'Trump')
+
+# Models the AI players can use: name -> folder holding bidding_net.pt and playing_net.pt.
+# v1 and v3 share the same player and network shapes, so only the weights differ.
+# A model is offered in the page only when both of its weight files exist.
+MODELS = {
+    'v1': os.path.join(TRUMP_DIR, 'models'),
+    'v3': os.path.join(TRUMP_DIR, 'v3', 'models_fresh'),
+}
+DEFAULT_MODEL = 'v1'
+
+
+def model_paths(name):
+    """The (bidding weights, playing weights) file paths of a model."""
+    return os.path.join(MODELS[name], 'bidding_net.pt'), os.path.join(MODELS[name], 'playing_net.pt')
+
+
+def available_models():
+    """Names of the models whose weight files are both present."""
+    return [name for name in MODELS if all(os.path.exists(p) for p in model_paths(name))]
+
+
+def check_weights(name):
+    """Load a model's weights into throwaway networks; raises if a file is unreadable (e.g. mid-save)."""
+    bid_path, playing_path = model_paths(name)
+    BiddingNet().loadModel(bid_path)
+    PlayingNet().loadModel(playing_path)
 
 SEAT_NAMES = ['You', 'East', 'Partner', 'West']
 SUIT_NAMES = {0: 'clubs', 1: 'diamonds', 2: 'spades', 3: 'hearts'}
@@ -166,7 +191,8 @@ class Session:
         self.summary = None
         self.randomness = 0.0   # 0 = AI always greedy, 1 = AI always random
         self.reveal = False     # show the other players' hands
-        self.stats = Stats()
+        self.model = DEFAULT_MODEL   # which weights the three AI players use (see MODELS)
+        self.stats = Stats(stats_path(self.model))
         self.game = None
         self.thread = None
         self.start()
@@ -177,13 +203,14 @@ class Session:
         HumanPlayer(self.game, self)
         for _ in range(3):
             AIPlayer(self.game, self)
-        self.game.load_models(BID_MODEL_PATH, PLAYING_MODEL_PATH)
+        self.game.load_models(*model_paths(self.model))
         self.state = {'phase': 'dealing', 'turn': None, 'trick': [], 'trick_cards': [], 'trick_winner': None,
                       'legal': [], 'min_bid': None}
         self.thread = threading.Thread(target=self._run, args=(self.game,), daemon=True)
         self.thread.start()
 
-    def restart(self):
+    def restart(self, model=None):
+        """Abandon the current game and start a new one, optionally with another AI model (which also switches the stats)."""
         with self.cv:
             self.abort.set()
             self.cv.notify_all()
@@ -197,7 +224,38 @@ class Session:
             self.summary = None
             self.awaiting = None
             self.action = None
+            if model is not None and model != self.model:
+                self.model = model
+                self.stats = Stats(stats_path(model))
             self.start()
+
+    def set_model(self, name):
+        """
+        Switch the three AI players to another model, which starts a new game.
+
+        Returns:
+            (bool, str): Whether the switch happened, and an error message if not
+        """
+        if name not in available_models():
+            return False, 'Model %s is not available' % name
+        if name == self.model:
+            return True, None
+        try:
+            check_weights(name)
+        except Exception:
+            return False, 'Could not load the %s weights (a training save may be in progress), try again' % name
+        previous = self.model
+        try:
+            self.restart(name)
+        except Exception:
+            self.restart(previous)  # best effort: go back to the model that was working
+            return False, 'Could not switch to the %s model' % name
+        return True, None
+
+    def stats_report(self):
+        report = self.stats.report()
+        report['model'] = self.model
+        return report
 
     def update_settings(self, randomness=None, reveal=None):
         with self.cv:
@@ -314,6 +372,8 @@ class Session:
                 'trick_winner': st.get('trick_winner'),
                 'randomness': self.randomness,
                 'reveal': self.reveal,
+                'model': self.model,
+                'models': available_models(),
                 'other_hands': {i: [card_json(c) for c in sorted(players[i].hand, key=hand_sort_key)]
                                 for i in (1, 2, 3)} if self.reveal else None,
                 'log': list(self.messages),

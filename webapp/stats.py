@@ -11,6 +11,13 @@ import threading
 STATS_PATH = os.path.join(os.path.dirname(__file__), 'stats.json')
 
 
+def stats_path(model):
+    """Stats file of an AI model: v1 keeps the original stats.json, every other model has its own stats_<model>.json."""
+    if model == 'v1':
+        return STATS_PATH
+    return os.path.join(os.path.dirname(__file__), 'stats_%s.json' % model)
+
+
 def _empty():
     return {
         'games': 0, 'games_won': 0,

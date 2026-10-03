@@ -20,6 +20,7 @@
   .controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
   .controls label { background: rgba(0,0,0,.35); padding: 6px 12px; border-radius: 999px; font-size: 13px; }
   .controls input { vertical-align: middle; width: 110px; }
+  .controls select { font: inherit; background: #1b2b24; color: var(--text); border: 0; border-radius: 6px; padding: 2px 6px; margin-left: 4px; }
   .seat .shown { display: flex; flex-wrap: wrap; justify-content: center; gap: 2px; margin-top: 6px; }
   .seat .shown .card { width: 26px; height: 38px; font-size: 11px; box-shadow: 0 1px 2px rgba(0,0,0,.5); }
   .seat .shown .card small { font-size: 11px; }
@@ -90,6 +91,8 @@
       <div class="controls">
         <label title="0 = AI always plays its best move, 1 = AI plays completely at random">AI randomness
           <input type="range" id="rand" min="0" max="1" step="0.05" value="0"> <b id="randval">0.00</b></label>
+        <label id="modellbl" title="Which trained networks the three AI players use. Changing it starts a new game." hidden>AI model
+          <select id="model"></select></label>
         <button class="ghost" id="reveal">Reveal hands</button>
         <button class="ghost" id="statsbtn">Stats</button>
         <button class="ghost" id="newgame">New game</button>
@@ -212,6 +215,14 @@ function render(st) {
   log.innerHTML = st.log.map(l => `<div>${l}</div>`).join('');
   if (atEnd) log.scrollTop = log.scrollHeight;
 
+  const sel = $('model'), models = st.models.join(',');
+  if (sel.dataset.models !== models) {
+    sel.innerHTML = st.models.map(m => `<option value="${m}">${m}</option>`).join('');
+    sel.dataset.models = models;
+  }
+  if (document.activeElement !== sel) sel.value = st.model;
+  $('modellbl').hidden = st.models.length < 2;   // nothing to choose from
+
   $('reveal').textContent = st.reveal ? 'Hide hands' : 'Reveal hands';
   if (document.activeElement !== $('rand')) { $('rand').value = st.randomness; $('randval').textContent = st.randomness.toFixed(2); }
   renderModal(st);
@@ -246,6 +257,12 @@ async function poll() {
 $('rand').oninput = () => { $('randval').textContent = (+$('rand').value).toFixed(2); };
 $('rand').onchange = () => api('/api/settings', { randomness: +$('rand').value });
 $('reveal').onclick = () => api('/api/settings', { reveal: !state.reveal });
+$('model').onchange = async () => {
+  const wanted = $('model').value;
+  if (!confirm(`Switch the AI to model ${wanted}? This abandons the current game and starts a new one.`)) { $('model').value = state.model; return; }
+  const j = await api('/api/model', { model: wanted });
+  if (!j.ok) $('model').value = state.model;
+};
 
 const f1 = v => v === null ? '–' : v.toFixed(1), pct = v => v === null ? '–' : v.toFixed(0) + '%';
 async function showStats() {
@@ -253,11 +270,11 @@ async function showStats() {
   const names = ['You', 'Partner', 'East', 'West'], idx = [0, 2, 1, 3];
   const rows = idx.map((i, k) => { const x = s.seats[i];
     return `<tr class="team-${i % 2 ? 'them' : 'us'}"><td>${names[k]}</td><td>${f1(x.avg_bid)}</td><td>${f1(x.avg_tricks)}</td><td>${pct(x.made_pct)}</td><td>${pct(x.over_pct)}</td><td>${pct(x.under_pct)}</td><td>${f1(x.avg_points)}</td></tr>`; }).join('');
-  $('statsbox').innerHTML = `<h2>Statistics</h2>
+  $('statsbox').innerHTML = `<h2>Statistics — AI model ${s.model}</h2>
     <p>Games won by you + partner: <b>${s.games_won} / ${s.games}</b> (${s.games ? Math.round(100 * s.games_won / s.games) : '–'}%) · Rounds played: <b>${s.rounds}</b><br>
     Total round points: you + partner <b>${s.team_points[0]}</b>, opponents <b>${s.team_points[1]}</b></p>
     <table><tr><th></th><th>Avg bid</th><th>Avg tricks</th><th>Bid made</th><th>Overbid</th><th>Underbid</th><th>Pts/round</th></tr>${rows}</table>
-    <p style="color:var(--muted);font-size:12px">Overbid = failed the bid; Underbid = won more tricks than bid. Stats accumulate across games (all AI-randomness settings mixed together) and are saved in webapp/stats.json. Only completed rounds count.</p>
+    <p style="color:var(--muted);font-size:12px">Overbid = failed the bid; Underbid = won more tricks than bid. Stats accumulate across games (all AI-randomness settings mixed together), separately for each AI model, and are saved in webapp/stats.json (v1) or webapp/stats_&lt;model&gt;.json. Only completed rounds count.</p>
     <p style="text-align:right"><button class="ghost" id="resetstats">Reset stats</button> <button id="closestats">Close</button></p>`;
   $('closestats').onclick = () => $('statsmodal').classList.remove('show');
   $('resetstats').onclick = async () => { if (confirm('Erase all statistics?')) { await api('/api/reset_stats'); showStats(); } };

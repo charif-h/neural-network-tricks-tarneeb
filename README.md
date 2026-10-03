@@ -128,3 +128,5 @@ Play as South with an AI partner against two AI opponents, using the trained net
 ```
 
 No extra dependencies (standard-library HTTP server + plain HTML/JS).
+
+The **AI model** dropdown in the top bar chooses which trained networks the three AI players use (all three use the same one): `v1` (`Trump/models/`) or `v3` (`Trump/v3/models_fresh/`). A model is listed only when its weight files exist; switching starts a new game, and statistics are kept separately for each model. Trained weights are not stored in git (see `.gitignore`).

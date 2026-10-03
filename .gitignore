@@ -135,9 +135,11 @@ Thumbs.db
 *.pkl
 *.pickle
 models/
+models_*/
 checkpoints/
 
 # Logs
 logs/
 *.log
 webapp/stats.json
+webapp/stats_*.json
