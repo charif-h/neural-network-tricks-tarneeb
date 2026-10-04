@@ -87,6 +87,8 @@ class WebGame(TrumpGame):
         s = self.session
         s.set(phase='bidding', trick=[], trick_cards=[], trick_winner=None)
         self.bids = [0] * self.NUM_PLAYERS
+        for player in self.players:
+            player.tricks_won = 0   # clear the previous round's count for the display
         for k in range(self.NUM_PLAYERS):
             seat = (self.start_player + k) % self.NUM_PLAYERS
             player = self.players[seat]
@@ -188,6 +190,7 @@ class Session:
         self.action = None
         self.messages = []
         self.round_deltas = []
+        self.history = []         # one {'bids', 'scores'} per finished round (scores are running totals)
         self.summary = None
         self.randomness = 0.0   # 0 = AI always greedy, 1 = AI always random
         self.reveal = False     # show the other players' hands
@@ -221,6 +224,7 @@ class Session:
             self.abort = threading.Event()
             self.version += 1
             self.messages = []
+            self.history = []
             self.summary = None
             self.awaiting = None
             self.action = None
@@ -337,6 +341,7 @@ class Session:
                           'hand': [card_json(c) for c in game.deal_hands[i]]})
             self.log('%s: bid %d, won %d -> %+d' % (SEAT_NAMES[i], game.bids[i], p.tricks_won, self.round_deltas[i]))
         self.stats.record_round(game.bids, [p.tricks_won for p in game.players], self.round_deltas)
+        self.history.append({'bids': list(game.bids), 'scores': [p.score for p in game.players]})
         self.summary = {'seats': seats, 'over': game.is_over()}
         if game.is_over():
             mine = game._team_result(0, 2)
@@ -376,6 +381,7 @@ class Session:
                 'models': available_models(),
                 'other_hands': {i: [card_json(c) for c in sorted(players[i].hand, key=hand_sort_key)]
                                 for i in (1, 2, 3)} if self.reveal else None,
+                'history': list(self.history),
                 'log': list(self.messages),
                 'summary': self.summary if st['phase'] in ('round_over', 'game_over') else None,
             }
