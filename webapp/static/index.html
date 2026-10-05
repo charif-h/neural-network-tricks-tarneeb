@@ -198,6 +198,7 @@ const I18N = {
     trump: 'Trump', rand: 'AI randomness', model: 'AI model', stats: 'Stats', newGame: 'New game',
     randTitle: '0 = AI always plays its best move, 1 = AI plays completely at random',
     modelTitle: 'Which trained networks the three AI players use. Changing it starts a new game.',
+    finalScores: 'Final scores',
     busy: 'The table is full right now — try again in a few minutes.',
     reveal: 'Reveal hands', hide: 'Hide hands', scoresH: 'Scores (41 to win)', logH: 'Log',
     rules: 'Teams: <span class="good">You + Anas</span> vs <span class="bad">Jamal + Bilal</span>. A player scores their bid if they take at least that many tricks, otherwise loses it (bids 7-12 count double, 13 triple).',
@@ -223,6 +224,7 @@ const I18N = {
     trump: 'الطرنيب', rand: 'عشوائية الذكاء الاصطناعي', model: 'نموذج الذكاء الاصطناعي', stats: 'الإحصائيات', newGame: 'لعبة جديدة',
     randTitle: '0 = يلعب الذكاء الاصطناعي دائمًا أفضل حركة، 1 = يلعب عشوائيًا تمامًا',
     modelTitle: 'الشبكات العصبية المدرَّبة التي يستخدمها اللاعبون الثلاثة. تغييرها يبدأ لعبة جديدة.',
+    finalScores: 'النتائج النهائية',
     busy: 'الطاولة ممتلئة حاليًا — حاول مجددًا بعد دقائق.',
     reveal: 'اكشف الأوراق', hide: 'أخفِ الأوراق', scoresH: 'النقاط (41 للفوز)', logH: 'السجل',
     rules: 'الفريقان: <span class="good">أنت + أنس</span> ضد <span class="bad">جمال + بلال</span>. يحصل اللاعب على نقاط مزايدته إذا أخذ عددًا من الأكلات يساويها أو يزيد عليها، وإلا خسرها (المزايدات 7-12 تُحتسب بالضعف، و13 بثلاثة أضعاف).',
@@ -262,7 +264,7 @@ const SERVER_MSG_AR = [
 ];
 const SEAT_EN = ['You', 'East', 'Partner', 'West'];
 let lang = 'en';
-try { lang = localStorage.getItem('lang') === 'ar' ? 'ar' : 'en'; } catch (e) {}
+try { lang = localStorage.getItem('lang') === 'en' ? 'en' : 'ar'; } catch (e) {}
 const T = () => I18N[lang];
 const trSeat = n => { const i = SEAT_EN.indexOf(n); return i < 0 ? n : T().seats[i]; };
 const trMsg = text => {
@@ -402,6 +404,17 @@ function renderModal(st) {
            `<tr><td colspan="5"><div class="reveal">${x.hand.map(c => cardEl(c).outerHTML).join('')}</div></td></tr>`;
   }).join('');
   const t = T(), sg = v => (v > 0 ? '+' : '') + v;
+  if (s.over) {   // end of the game: just the result and the final scores
+    const head = s.seats.map((x, i) => `<th class="team-${i % 2 ? 'them' : 'us'}">${trSeat(x.name)}</th>`).join('');
+    const scores = s.seats.map(x => `<td dir="ltr" style="font-size:26px;text-align:center"><b>${x.score}</b></td>`).join('');
+    m.querySelector('#modalbox').innerHTML = `<h2>${s.winner === 'us' ? t.win : t.lose}</h2>
+      <h2 style="font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)">${t.finalScores}</h2>
+      <table><tr>${head.replace(/<th /g, '<th style="text-align:center" ')}</tr><tr>${scores}</tr></table>
+      <p style="text-align:${lang === 'ar' ? 'left' : 'right'}"><button id="next">${t.newGame}</button></p>`;
+    $('next').onclick = () => api('/api/new_game');
+    m.classList.add('show');
+    return;
+  }
   let title = s.over ? (s.winner === 'us' ? t.win : t.lose) : t.roundDone;
   m.querySelector('#modalbox').innerHTML = `<h2>${title}</h2>
     <p>${t.roundSummary({ c: teamUs >= 0 ? 'good' : 'bad', t: sg(teamUs) }, { c: teamThem >= 0 ? 'good' : 'bad', t: sg(teamThem) })}</p>
