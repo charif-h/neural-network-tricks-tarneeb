@@ -114,9 +114,9 @@
     .controls button { padding: 10px 14px; }
     html[dir=rtl] .controls { right: auto; left: 0; }
 
-    /* more room for the table: no log, no rules text, score sheet reduced to its titles and last line */
+    /* more room for the table: no log, no rules text, score sheet reduced to its titles and last two lines */
     #log, #logh, #rules { display: none; }
-    #scores tr:not(:first-child):not(:last-child) { display: none; }
+    #scores tr:not(:first-child):not(:last-child):not(:nth-last-child(2)) { display: none; }
     aside { padding: 8px 14px; max-height: none; }
     aside h2 { margin: 4px 0; }
     .table { padding: 8px 8px; gap: 6px; min-height: 0; }
