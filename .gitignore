@@ -143,3 +143,13 @@ logs/
 *.log
 webapp/stats.json
 webapp/stats_*.json
+
+# ...but the demo (Docker image) needs the two trained models
+!Trump/models/
+Trump/models/*
+!Trump/models/bidding_net.pt
+!Trump/models/playing_net.pt
+!Trump/v3/models_fresh/
+Trump/v3/models_fresh/*
+!Trump/v3/models_fresh/bidding_net.pt
+!Trump/v3/models_fresh/playing_net.pt
