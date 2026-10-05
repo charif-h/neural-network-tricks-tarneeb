@@ -29,7 +29,7 @@ MODELS = {
     'v1': os.path.join(TRUMP_DIR, 'models'),
     'v3': os.path.join(TRUMP_DIR, 'v3', 'models_fresh'),
 }
-DEFAULT_MODEL = 'v1'
+DEFAULT_MODEL = 'v3'
 
 
 def model_paths(name):

@@ -37,6 +37,11 @@
   .seat .meta { font-size: 13px; color: #cfe3d8; }
   .seat.n { grid-area: n; justify-self: center; min-width: 220px; }
   .seat.w { grid-area: w; } .seat.e { grid-area: e; }
+  .boxes { display: flex; flex-wrap: wrap; justify-content: center; gap: 3px; margin-top: 6px; min-height: 18px; direction: ltr; }
+  .boxes i { min-width: 14px; height: 18px; padding: 0 1px; box-sizing: border-box; border: 2px dotted #ff6b6b; border-radius: 3px; font: 700 11px/14px system-ui, sans-serif; font-style: normal;
+             color: var(--text); text-align: center; }
+  .boxes i.won { background: #ff6b6b; border-style: solid; }
+  .boxes i.made { background: #2e9e5b; border: 2px solid #2e9e5b; }
   .badge { display: inline-block; background: var(--gold); color: #222; border-radius: 6px; padding: 0 6px; font-weight: 700; font-size: 12px; margin-left: 4px; }
   .backs { display: flex; justify-content: center; margin-top: 6px; min-height: 30px; }
   .backs i { width: 16px; height: 26px; margin-left: -8px; border-radius: 3px; background: repeating-linear-gradient(45deg,#2b4fa8,#2b4fa8 3px,#1e3a80 3px,#1e3a80 6px); border: 1px solid #fff8; }
@@ -245,10 +250,22 @@ function cardEl(c, opts = {}) {
   return d;
 }
 
+// One small frame per trick bid (the last one carries the bid number); each trick won fills a frame.
+// Once the bid is made every frame turns green (the number stays) and extra tricks add green frames.
+function bidBoxes(s) {
+  if (!s.bid) return '<div class="boxes"></div>';
+  const made = s.tricks >= s.bid, n = Math.max(s.bid, s.tricks), t = T();
+  let h = '';
+  for (let k = 1; k <= n; k++) {
+    const cls = made ? 'made' : k <= s.tricks ? 'won' : '';
+    h += `<i class="${cls}">${k === s.bid ? s.bid : ''}</i>`;
+  }
+  return `<div class="boxes" title="${t.bidWord} ${s.bid} · ${t.tricksWord} ${s.tricks}">${h}</div>`;
+}
+
 function seatHtml(i, s, st) {
   const dealer = st.dealer === i ? '<span class="badge">D</span>' : '';
-  const t = T(), bid = s.bid ? `${t.bidWord} <b>${s.bid}</b>` : t.noBid;
-  return `<h3>${trSeat(s.name)}${dealer}</h3><div class="meta">${bid} · ${t.tricksWord} <b>${s.tricks}</b> · ${t.scoreWord} <b>${s.score}</b></div>` +
+  return `<h3>${trSeat(s.name)}${dealer}</h3>${bidBoxes(s)}` +
          (i === 0 ? '' : st.other_hands ? `<div class="shown">${st.other_hands[i].map(c => cardEl(c).outerHTML).join('')}</div>`
                         : `<div class="backs">${'<i></i>'.repeat(s.cards)}</div>`);
 }
