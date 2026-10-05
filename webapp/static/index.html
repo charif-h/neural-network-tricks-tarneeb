@@ -37,6 +37,11 @@
   .seat .meta { font-size: 13px; color: #cfe3d8; }
   .seat.n { grid-area: n; justify-self: center; min-width: 220px; }
   .seat.w { grid-area: w; } .seat.e { grid-area: e; }
+  .boxes { display: flex; flex-wrap: wrap; justify-content: center; gap: 3px; margin-top: 6px; min-height: 18px; direction: ltr; }
+  .boxes i { min-width: 14px; height: 18px; padding: 0 1px; box-sizing: border-box; border: 2px dotted #ff6b6b; border-radius: 3px; font: 700 11px/14px system-ui, sans-serif; font-style: normal;
+             color: var(--text); text-align: center; }
+  .boxes i.won { background: #ff6b6b; border-style: solid; }
+  .boxes i.made { background: #2e9e5b; border: 2px solid #2e9e5b; }
   .badge { display: inline-block; background: var(--gold); color: #222; border-radius: 6px; padding: 0 6px; font-weight: 700; font-size: 12px; margin-left: 4px; }
   .backs { display: flex; justify-content: center; margin-top: 6px; min-height: 30px; }
   .backs i { width: 16px; height: 26px; margin-left: -8px; border-radius: 3px; background: repeating-linear-gradient(45deg,#2b4fa8,#2b4fa8 3px,#1e3a80 3px,#1e3a80 6px); border: 1px solid #fff8; }
@@ -68,6 +73,9 @@
   table { width: 100%; border-collapse: collapse; font-size: 13px; }
   th, td { padding: 3px 4px; text-align: right; } th:first-child, td:first-child { text-align: left; }
   th { color: var(--muted); font-weight: 500; }
+  #scores th, #scores td { text-align: center !important; }
+  #scores td { border-top: 1px solid rgba(255,255,255,.08); }
+  #scores th.team-us { color: #7fd6a0; } #scores th.team-them { color: #ff9a8b; }
   tr.team-us td:first-child { color: #7fd6a0; } tr.team-them td:first-child { color: #ff9a8b; }
   #log { font-size: 13px; color: #c5ced6; max-height: 320px; overflow-y: auto; }
   #log div { padding: 1px 0; }
@@ -81,21 +89,31 @@
   .reveal .card small { font-size: 13px; }
   .good { color: #7fd6a0; } .bad { color: #ff9a8b; }
   #toast { position: fixed; bottom: 14px; left: 50%; transform: translateX(-50%); background: #b71c1c; color: #fff; padding: 8px 14px; border-radius: 8px; display: none; z-index: 9; }
+  html[dir=rtl] th, html[dir=rtl] td { text-align: left; } html[dir=rtl] th:first-child, html[dir=rtl] td:first-child { text-align: right; }
+  html[dir=rtl] .controls select { margin-left: 0; margin-right: 4px; }
+  html[dir=rtl] .badge { margin-left: 0; margin-right: 4px; }
+  html[dir=rtl] .hand, html[dir=rtl] .reveal, html[dir=rtl] .seat .shown { direction: ltr; }   /* cards keep their order */
+  /* The table is a physical layout (West on your left, East on your right, trick cards placed by left/top):
+     keep it left-to-right in Arabic too, and only restore RTL for the text inside the seats. */
+  html[dir=rtl] .arena { direction: ltr; }
+  html[dir=rtl] .seat { direction: rtl; }
+  html[dir=rtl] body { font-family: "Segoe UI", Tahoma, system-ui, sans-serif; }
 </style>
 </head>
 <body>
 <div id="app">
   <main class="table">
     <div class="topbar">
-      <div><span class="trump">Trump: <b id="trump">–</b></span> <span id="roundlbl" style="margin-left:10px"></span></div>
+      <div><span class="trump"><span data-i18n="trump">Trump</span>: <b id="trump">–</b></span> <span id="roundlbl" style="margin-left:10px"></span></div>
       <div class="controls">
-        <label title="0 = AI always plays its best move, 1 = AI plays completely at random">AI randomness
+        <label data-i18n-title="randTitle" title="0 = AI always plays its best move, 1 = AI plays completely at random"><span data-i18n="rand">AI randomness</span>
           <input type="range" id="rand" min="0" max="1" step="0.05" value="0"> <b id="randval">0.00</b></label>
-        <label id="modellbl" title="Which trained networks the three AI players use. Changing it starts a new game." hidden>AI model
+        <label id="modellbl" data-i18n-title="modelTitle" title="Which trained networks the three AI players use. Changing it starts a new game." hidden><span data-i18n="model">AI model</span>
           <select id="model"></select></label>
+        <button class="ghost" id="langbtn" title="English / العربية">العربية</button>
         <button class="ghost" id="reveal">Reveal hands</button>
-        <button class="ghost" id="statsbtn">Stats</button>
-        <button class="ghost" id="newgame">New game</button>
+        <button class="ghost" id="statsbtn" data-i18n="stats">Stats</button>
+        <button class="ghost" id="newgame" data-i18n="newGame">New game</button>
       </div>
     </div>
     <div>
@@ -114,11 +132,10 @@
     </div>
   </main>
   <aside>
-    <h2>Scores (41 to win)</h2>
+    <h2 data-i18n="scoresH">Scores (41 to win)</h2>
     <table id="scores"></table>
-    <p style="color:var(--muted);font-size:12px">Teams: <span class="good">You + Partner</span> vs <span class="bad">West + East</span>.
-      A player scores their bid if they take at least that many tricks, otherwise loses it (bids 7-12 count double, 13 triple).</p>
-    <h2>Log</h2>
+    <p style="color:var(--muted);font-size:12px" id="rules"></p>
+    <h2 data-i18n="logH">Log</h2>
     <div id="log"></div>
   </aside>
 </div>
@@ -133,10 +150,95 @@ const RED = new Set(['diamonds', 'hearts']);
 let state = null, lastVersion = -1;
 
 const $ = id => document.getElementById(id);
+
+// ---------- Translations (English is the default; Arabic is right-to-left) ----------
+const I18N = {
+  en: {
+    trump: 'Trump', rand: 'AI randomness', model: 'AI model', stats: 'Stats', newGame: 'New game',
+    randTitle: '0 = AI always plays its best move, 1 = AI plays completely at random',
+    modelTitle: 'Which trained networks the three AI players use. Changing it starts a new game.',
+    reveal: 'Reveal hands', hide: 'Hide hands', scoresH: 'Scores (41 to win)', logH: 'Log',
+    rules: 'Teams: <span class="good">You + Anas</span> vs <span class="bad">Jamal + Bilal</span>. A player scores their bid if they take at least that many tricks, otherwise loses it (bids 7-12 count double, 13 triple).',
+    seats: ['You', 'Bilal', 'Anas', 'Jamal'], suits: { clubs: 'clubs', diamonds: 'diamonds', spades: 'spades', hearts: 'hearts' },
+    round: n => `Round ${n}`, bidWord: 'bid', noBid: 'no bid', tricksWord: 'tricks', scoreWord: 'score',
+    yourBid: 'Your bid', yourBidQ: 'how many tricks will you take?',
+    stBid: 'Your turn to bid', stFollow: 'Your turn — follow suit if you can', stLead: 'Your lead',
+    stBidding: n => `${n} is bidding…`, stBidDone: 'Bidding complete', stWins: n => `${n} wins the trick`, stThinking: n => `${n} is thinking…`,
+    thBid: 'Bid', thWon: 'Won', thScore: 'Score',
+    win: '🏆 You and your partner win!', lose: 'Game over — the opponents win', roundDone: 'Round complete',
+    roundSummary: (a, b) => `This round: you + partner <b class="${a.c}">${a.t}</b>, opponents <b class="${b.c}">${b.t}</b>. Hands as dealt are shown below.`,
+    nextRound: 'Next round',
+    confirmModel: m => `Switch the AI to model ${m}? This abandons the current game and starts a new one.`,
+    confirmNew: 'Abandon this game and start a new one?', confirmReset: 'Erase all statistics?',
+    statsTitle: m => `Statistics — AI model ${m}`,
+    statsNames: ['You', 'Anas', 'Bilal', 'Jamal'],
+    statsLine: (w, g, r, a, b) => `Games won by you + partner: <b>${w} / ${g}</b> (${g ? Math.round(100 * w / g) : '–'}%) · Rounds played: <b>${r}</b><br>Total round points: you + partner <b>${a}</b>, opponents <b>${b}</b>`,
+    statsHead: ['Avg bid', 'Avg tricks', 'Bid made', 'Overbid', 'Underbid', 'Pts/round'],
+    statsNote: 'Overbid = failed the bid; Underbid = won more tricks than bid. Stats accumulate across games (all AI-randomness settings mixed together), separately for each AI model, and are saved in webapp/stats.json (v1) or webapp/stats_&lt;model&gt;.json. Only completed rounds count.',
+    resetStats: 'Reset stats', close: 'Close',
+  },
+  ar: {
+    trump: 'الطرنيب', rand: 'عشوائية الذكاء الاصطناعي', model: 'نموذج الذكاء الاصطناعي', stats: 'الإحصائيات', newGame: 'لعبة جديدة',
+    randTitle: '0 = يلعب الذكاء الاصطناعي دائمًا أفضل حركة، 1 = يلعب عشوائيًا تمامًا',
+    modelTitle: 'الشبكات العصبية المدرَّبة التي يستخدمها اللاعبون الثلاثة. تغييرها يبدأ لعبة جديدة.',
+    reveal: 'اكشف الأوراق', hide: 'أخفِ الأوراق', scoresH: 'النقاط (41 للفوز)', logH: 'السجل',
+    rules: 'الفريقان: <span class="good">أنت + أنس</span> ضد <span class="bad">جمال + بلال</span>. يحصل اللاعب على نقاط مزايدته إذا أخذ عددًا من الأكلات يساويها أو يزيد عليها، وإلا خسرها (المزايدات 7-12 تُحتسب بالضعف، و13 بثلاثة أضعاف).',
+    seats: ['أنت', 'بلال', 'أنس', 'جمال'], suits: { clubs: 'سباتي', diamonds: 'ديناري', spades: 'بستوني', hearts: 'كوبّة' },
+    round: n => `الجولة ${n}`, bidWord: 'ضمان', noBid: 'بلا ضمان', tricksWord: 'لطوش', scoreWord: 'النقاط',
+    yourBid: 'ضمانك', yourBidQ: 'كم لطش ستأخذ؟',
+    stBid: 'دورك في الضمان', stFollow: 'دورك — العب من نفس النوع إن أمكن', stLead: 'دورك في البدء',
+    stBidding: n => `${n} يضمن…`, stBidDone: 'انتهى الضمان', stWins: n => `${n} يربح اللطش`, stThinking: n => `${n} يفكّر…`,
+    thBid: 'الضمان', thWon: 'اللطوش', thScore: 'النقاط',
+    win: '🏆 أنت وشريكك فزتما!', lose: 'انتهت اللعبة — فاز الخصوم', roundDone: 'انتهت الجولة',
+    roundSummary: (a, b) => `هذه الجولة: أنت + شريكك <b class="${a.c}" dir="ltr">${a.t}</b>، الخصوم <b class="${b.c}" dir="ltr">${b.t}</b>. الأوراق كما وُزِّعت معروضة أدناه.`,
+    nextRound: 'الجولة التالية',
+    confirmModel: m => `تغيير النموذج إلى ${m}؟ سيتم التخلي عن اللعبة الحالية وبدء لعبة جديدة.`,
+    confirmNew: 'التخلي عن هذه اللعبة وبدء لعبة جديدة؟', confirmReset: 'مسح كل الإحصائيات؟',
+    statsTitle: m => `الإحصائيات — النموذج ${m}`,
+    statsNames: ['أنت', 'أنس', 'بلال', 'جمال'],
+    statsLine: (w, g, r, a, b) => `الألعاب التي فزت بها مع شريكك: <b>${w} / ${g}</b> (${g ? Math.round(100 * w / g) : '–'}%) · الجولات الملعوبة: <b>${r}</b><br>مجموع نقاط الجولات: أنت + شريكك <b>${a}</b>، الخصوم <b>${b}</b>`,
+    statsHead: ['متوسط الضمان', 'متوسط اللطوش', 'ضمان ناجح', 'ضمان زائد', 'ضمان ناقص', 'نقاط/جولة'],
+    statsNote: 'ضمان زائد = فشل في تحقيق الضمان؛ ضمان ناقص = أخذ لطوش أكثر مما ضمن. تتراكم الإحصائيات عبر الألعاب (بكل إعدادات العشوائية معًا) ولكل نموذج على حدة، وتُحفظ في webapp/stats.json (النموذج v1) أو webapp/stats_&lt;model&gt;.json. تُحتسب الجولات المكتملة فقط.',
+    resetStats: 'تصفير الإحصائيات', close: 'إغلاق',
+  },
+};
+// Server messages (log lines, errors) are English; translate them here.
+const SERVER_MSG_AR = [
+  [/^(\w+) bids (\d+)$/, (m, n, b) => `${trSeat(n)} يضمن ${b}`],
+  [/^Bids total (\d+) \(< (\d+)\): cards are redealt$/, (m, a, b) => `مجموع الضمانات ${a} (أقل من ${b}): تُعاد التوزيعة`],
+  [/^--- Round (\d+) ---$/, (m, n) => `--- الجولة ${n} ---`],
+  [/^Game over$/, () => 'انتهت اللعبة'],
+  [/^(\w+): bid (\d+), won (\d+) -> ([+-]?\d+)$/, (m, n, b, w, d) => `${trSeat(n)}: اضمن ${b}، أخذ ${w} ← <span dir="ltr">${d}</span>`],
+  [/^Not waiting for a (\w+) right now$/, () => 'لا يُنتظر هذا الإجراء الآن'],
+  [/^Invalid bid$/, () => 'ضمان غير صالح'],
+  [/^That card cannot be played now$/, () => 'لا يمكن لعب هذه الورقة الآن'],
+  [/^Model (\S+) is not available$/, (m, n) => `النموذج ${n} غير متوفر`],
+  [/^Could not load the (\S+) weights.*$/, (m, n) => `تعذّر تحميل أوزان النموذج ${n} (ربما يجري حفظ تدريب)، حاول مجددًا`],
+  [/^Could not switch to the (\S+) model$/, (m, n) => `تعذّر التبديل إلى النموذج ${n}`],
+];
+const SEAT_EN = ['You', 'East', 'Partner', 'West'];
+let lang = 'en';
+try { lang = localStorage.getItem('lang') === 'ar' ? 'ar' : 'en'; } catch (e) {}
+const T = () => I18N[lang];
+const trSeat = n => { const i = SEAT_EN.indexOf(n); return i < 0 ? n : T().seats[i]; };
+const trMsg = text => {
+  if (lang !== 'ar') return text;
+  for (const [re, f] of SERVER_MSG_AR) { const m = text.match(re); if (m) return f(...m); }
+  return text;
+};
+function applyLang() {
+  document.documentElement.lang = lang; document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+  document.title = lang === 'ar' ? 'طاولة الأتوت' : 'Trump Table';
+  document.querySelectorAll('[data-i18n]').forEach(e => e.textContent = T()[e.dataset.i18n]);
+  document.querySelectorAll('[data-i18n-title]').forEach(e => e.title = T()[e.dataset.i18nTitle]);
+  $('rules').innerHTML = T().rules;
+  $('langbtn').textContent = lang === 'ar' ? 'English' : 'العربية';
+  if (state) render(state);
+}
 async function api(path, body) {
   const r = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) });
   const j = await r.json();
-  if (!j.ok && j.error) toast(j.error);
+  if (!j.ok && j.error) toast(trMsg(j.error));
   return j;
 }
 function toast(msg) { const t = $('toast'); t.textContent = msg; t.style.display = 'block'; setTimeout(() => t.style.display = 'none', 2000); }
@@ -148,18 +250,30 @@ function cardEl(c, opts = {}) {
   return d;
 }
 
+// One small frame per trick bid (the last one carries the bid number); each trick won fills a frame.
+// Once the bid is made every frame turns green (the number stays) and extra tricks add green frames.
+function bidBoxes(s) {
+  if (!s.bid) return '<div class="boxes"></div>';
+  const made = s.tricks >= s.bid, n = Math.max(s.bid, s.tricks), t = T();
+  let h = '';
+  for (let k = 1; k <= n; k++) {
+    const cls = made ? 'made' : k <= s.tricks ? 'won' : '';
+    h += `<i class="${cls}">${k === s.bid ? s.bid : ''}</i>`;
+  }
+  return `<div class="boxes" title="${t.bidWord} ${s.bid} · ${t.tricksWord} ${s.tricks}">${h}</div>`;
+}
+
 function seatHtml(i, s, st) {
   const dealer = st.dealer === i ? '<span class="badge">D</span>' : '';
-  const bid = s.bid ? `bid <b>${s.bid}</b>` : 'no bid';
-  return `<h3>${s.name}${dealer}</h3><div class="meta">${bid} · tricks <b>${s.tricks}</b> · score <b>${s.score}</b></div>` +
+  return `<h3>${trSeat(s.name)}${dealer}</h3>${bidBoxes(s)}` +
          (i === 0 ? '' : st.other_hands ? `<div class="shown">${st.other_hands[i].map(c => cardEl(c).outerHTML).join('')}</div>`
                         : `<div class="backs">${'<i></i>'.repeat(s.cards)}</div>`);
 }
 
 function render(st) {
   state = st;
-  $('trump').innerHTML = st.trump ? `<span style="color:${RED.has(st.trump) ? '#ff6b6b' : '#fff'}">${SYM[st.trump]}</span> ${st.trump}` : '–';
-  $('roundlbl').textContent = st.round ? `Round ${st.round}` : '';
+  $('trump').innerHTML = st.trump ? `<span style="color:${RED.has(st.trump) ? '#ff6b6b' : '#fff'}">${SYM[st.trump]}</span> ${T().suits[st.trump]}` : '–';
+  $('roundlbl').textContent = st.round ? T().round(st.round) : '';
 
   st.seats.forEach((s, i) => {
     const el = $('seat' + i);
@@ -194,25 +308,30 @@ function render(st) {
   const bp = $('bidpanel');
   bp.hidden = st.awaiting !== 'bid';
   if (st.awaiting === 'bid') {
-    const seatsBid = st.seats.map(s => s.bid ? `${s.name}: ${s.bid}` : null).filter(Boolean).join(' · ');
+    const seatsBid = st.seats.map(s => s.bid ? `${trSeat(s.name)}: ${s.bid}` : null).filter(Boolean).join(' · ');
     let btns = '';
     for (let b = 2; b <= 13; b++) btns += `<button data-b="${b}" ${b < st.min_bid ? 'disabled' : ''}>${b}</button>`;
-    bp.innerHTML = `<div><b>Your bid</b> — how many tricks will you take? <span style="color:#cfe3d8">${seatsBid ? '(' + seatsBid + ')' : ''}</span></div><div class="row">${btns}</div>`;
+    bp.innerHTML = `<div><b>${T().yourBid}</b> — ${T().yourBidQ} <span style="color:#cfe3d8">${seatsBid ? '(' + seatsBid + ')' : ''}</span></div><div class="row">${btns}</div>`;
     bp.querySelectorAll('button').forEach(b => b.onclick = () => api('/api/bid', { value: +b.dataset.b }));
   }
   let status = '';
-  if (st.awaiting === 'bid') status = 'Your turn to bid';
-  else if (st.awaiting === 'card') status = st.trick.length ? 'Your turn — follow suit if you can' : 'Your lead';
-  else if (st.phase === 'bidding') status = st.turn !== null ? `${st.seats[st.turn].name} is bidding…` : 'Bidding complete';
-  else if (st.phase === 'playing') status = st.trick_winner !== null && st.trick_winner !== undefined ? `${st.seats[st.trick_winner].name} wins the trick` : (st.turn !== null ? `${st.seats[st.turn].name} is thinking…` : '');
+  const t = T(), nm = i => trSeat(st.seats[i].name);
+  if (st.awaiting === 'bid') status = t.stBid;
+  else if (st.awaiting === 'card') status = st.trick.length ? t.stFollow : t.stLead;
+  else if (st.phase === 'bidding') status = st.turn !== null ? t.stBidding(nm(st.turn)) : t.stBidDone;
+  else if (st.phase === 'playing') status = st.trick_winner !== null && st.trick_winner !== undefined ? t.stWins(nm(st.trick_winner)) : (st.turn !== null ? t.stThinking(nm(st.turn)) : '');
   $('status').textContent = status;
 
   // sidebar
-  const order = [[0, 'us'], [2, 'us'], [1, 'them'], [3, 'them']];
-  $('scores').innerHTML = '<tr><th></th><th>Bid</th><th>Won</th><th>Score</th></tr>' +
-    order.map(([i, t]) => `<tr class="team-${t}"><td>${st.seats[i].name}</td><td>${st.seats[i].bid || '–'}</td><td>${st.seats[i].tricks}</td><td><b>${st.seats[i].score}</b></td></tr>`).join('');
+  // Score sheet: one column per player (you, East, partner, West), one row per round: bid/<b>running score</b>.
+  // The round in progress shows its bids with "–" until the round ends.
+  const cell = (bid, score) => `<td dir="ltr">${bid || '–'}/<b>${score === null ? '–' : score}</b></td>`;
+  const rows = st.history.map(h => '<tr>' + h.bids.map((b, i) => cell(b, h.scores[i])).join('') + '</tr>');
+  if (st.phase !== 'round_over' && st.phase !== 'game_over' && st.seats.some(s => s.bid))
+    rows.push('<tr>' + st.seats.map(s => cell(s.bid, null)).join('') + '</tr>');
+  $('scores').innerHTML = '<tr>' + st.seats.map((s, i) => `<th class="team-${i % 2 ? 'them' : 'us'}">${trSeat(s.name)}</th>`).join('') + '</tr>' + rows.join('');
   const log = $('log'); const atEnd = log.scrollTop + log.clientHeight >= log.scrollHeight - 20;
-  log.innerHTML = st.log.map(l => `<div>${l}</div>`).join('');
+  log.innerHTML = st.log.map(l => `<div>${trMsg(l)}</div>`).join('');
   if (atEnd) log.scrollTop = log.scrollHeight;
 
   const sel = $('model'), models = st.models.join(',');
@@ -223,7 +342,7 @@ function render(st) {
   if (document.activeElement !== sel) sel.value = st.model;
   $('modellbl').hidden = st.models.length < 2;   // nothing to choose from
 
-  $('reveal').textContent = st.reveal ? 'Hide hands' : 'Reveal hands';
+  $('reveal').textContent = st.reveal ? T().hide : T().reveal;
   if (document.activeElement !== $('rand')) { $('rand').value = st.randomness; $('randval').textContent = st.randomness.toFixed(2); }
   renderModal(st);
 }
@@ -235,14 +354,15 @@ function renderModal(st) {
   const teamUs = s.seats[0].delta + s.seats[2].delta, teamThem = s.seats[1].delta + s.seats[3].delta;
   const rows = [0, 2, 1, 3].map(i => {
     const x = s.seats[i], ok = x.tricks >= x.bid;
-    return `<tr class="team-${i % 2 ? 'them' : 'us'}"><td>${x.name}</td><td>${x.bid}</td><td>${x.tricks}</td><td class="${ok ? 'good' : 'bad'}">${x.delta > 0 ? '+' : ''}${x.delta}</td><td><b>${x.score}</b></td></tr>` +
+    return `<tr class="team-${i % 2 ? 'them' : 'us'}"><td>${trSeat(x.name)}</td><td>${x.bid}</td><td>${x.tricks}</td><td class="${ok ? 'good' : 'bad'}" dir="ltr">${x.delta > 0 ? '+' : ''}${x.delta}</td><td><b>${x.score}</b></td></tr>` +
            `<tr><td colspan="5"><div class="reveal">${x.hand.map(c => cardEl(c).outerHTML).join('')}</div></td></tr>`;
   }).join('');
-  let title = s.over ? (s.winner === 'us' ? '🏆 You and your partner win!' : 'Game over — the opponents win') : 'Round complete';
+  const t = T(), sg = v => (v > 0 ? '+' : '') + v;
+  let title = s.over ? (s.winner === 'us' ? t.win : t.lose) : t.roundDone;
   m.querySelector('#modalbox').innerHTML = `<h2>${title}</h2>
-    <p>This round: you + partner <b class="${teamUs >= 0 ? 'good' : 'bad'}">${teamUs > 0 ? '+' : ''}${teamUs}</b>, opponents <b class="${teamThem >= 0 ? 'good' : 'bad'}">${teamThem > 0 ? '+' : ''}${teamThem}</b>. Hands as dealt are shown below.</p>
-    <table><tr><th></th><th>Bid</th><th>Won</th><th>Δ</th><th>Score</th></tr>${rows}</table>
-    <p style="text-align:right"><button id="next">${s.over ? 'New game' : 'Next round'}</button></p>`;
+    <p>${t.roundSummary({ c: teamUs >= 0 ? 'good' : 'bad', t: sg(teamUs) }, { c: teamThem >= 0 ? 'good' : 'bad', t: sg(teamThem) })}</p>
+    <table><tr><th></th><th>${t.thBid}</th><th>${t.thWon}</th><th>Δ</th><th>${t.thScore}</th></tr>${rows}</table>
+    <p style="text-align:${lang === 'ar' ? 'left' : 'right'}"><button id="next">${s.over ? t.newGame : t.nextRound}</button></p>`;
   $('next').onclick = () => s.over ? api('/api/new_game') : api('/api/ack');
   m.classList.add('show');
 }
@@ -259,7 +379,7 @@ $('rand').onchange = () => api('/api/settings', { randomness: +$('rand').value }
 $('reveal').onclick = () => api('/api/settings', { reveal: !state.reveal });
 $('model').onchange = async () => {
   const wanted = $('model').value;
-  if (!confirm(`Switch the AI to model ${wanted}? This abandons the current game and starts a new one.`)) { $('model').value = state.model; return; }
+  if (!confirm(T().confirmModel(wanted))) { $('model').value = state.model; return; }
   const j = await api('/api/model', { model: wanted });
   if (!j.ok) $('model').value = state.model;
 };
@@ -267,21 +387,27 @@ $('model').onchange = async () => {
 const f1 = v => v === null ? '–' : v.toFixed(1), pct = v => v === null ? '–' : v.toFixed(0) + '%';
 async function showStats() {
   const s = await (await fetch('/api/stats')).json();
-  const names = ['You', 'Partner', 'East', 'West'], idx = [0, 2, 1, 3];
+  const t = T(), names = t.statsNames, idx = [0, 2, 1, 3];
   const rows = idx.map((i, k) => { const x = s.seats[i];
     return `<tr class="team-${i % 2 ? 'them' : 'us'}"><td>${names[k]}</td><td>${f1(x.avg_bid)}</td><td>${f1(x.avg_tricks)}</td><td>${pct(x.made_pct)}</td><td>${pct(x.over_pct)}</td><td>${pct(x.under_pct)}</td><td>${f1(x.avg_points)}</td></tr>`; }).join('');
-  $('statsbox').innerHTML = `<h2>Statistics — AI model ${s.model}</h2>
-    <p>Games won by you + partner: <b>${s.games_won} / ${s.games}</b> (${s.games ? Math.round(100 * s.games_won / s.games) : '–'}%) · Rounds played: <b>${s.rounds}</b><br>
-    Total round points: you + partner <b>${s.team_points[0]}</b>, opponents <b>${s.team_points[1]}</b></p>
-    <table><tr><th></th><th>Avg bid</th><th>Avg tricks</th><th>Bid made</th><th>Overbid</th><th>Underbid</th><th>Pts/round</th></tr>${rows}</table>
-    <p style="color:var(--muted);font-size:12px">Overbid = failed the bid; Underbid = won more tricks than bid. Stats accumulate across games (all AI-randomness settings mixed together), separately for each AI model, and are saved in webapp/stats.json (v1) or webapp/stats_&lt;model&gt;.json. Only completed rounds count.</p>
-    <p style="text-align:right"><button class="ghost" id="resetstats">Reset stats</button> <button id="closestats">Close</button></p>`;
+  $('statsbox').innerHTML = `<h2>${t.statsTitle(s.model)}</h2>
+    <p>${t.statsLine(s.games_won, s.games, s.rounds, s.team_points[0], s.team_points[1])}</p>
+    <table><tr><th></th>${t.statsHead.map(h => `<th>${h}</th>`).join('')}</tr>${rows}</table>
+    <p style="color:var(--muted);font-size:12px">${t.statsNote}</p>
+    <p style="text-align:${lang === 'ar' ? 'left' : 'right'}"><button class="ghost" id="resetstats">${t.resetStats}</button> <button id="closestats">${t.close}</button></p>`;
   $('closestats').onclick = () => $('statsmodal').classList.remove('show');
-  $('resetstats').onclick = async () => { if (confirm('Erase all statistics?')) { await api('/api/reset_stats'); showStats(); } };
+  $('resetstats').onclick = async () => { if (confirm(T().confirmReset)) { await api('/api/reset_stats'); showStats(); } };
   $('statsmodal').classList.add('show');
 }
 $('statsbtn').onclick = showStats;
-$('newgame').onclick = () => { if (confirm('Abandon this game and start a new one?')) api('/api/new_game'); };
+$('newgame').onclick = () => { if (confirm(T().confirmNew)) api('/api/new_game'); };
+$('langbtn').onclick = () => {
+  lang = lang === 'ar' ? 'en' : 'ar';
+  try { localStorage.setItem('lang', lang); } catch (e) {}
+  applyLang();
+  if ($('statsmodal').classList.contains('show')) showStats();
+};
+applyLang();
 poll();
 </script>
 </body>
