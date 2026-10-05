@@ -1,0 +1,4 @@
+# Dependencies of the web table only (the Docker image installs these, plus CPU-only torch).
+# The full requirements.txt also lists tensorflow/keras, which only the old Tarneeb code needs.
+numpy>=1.21.0,<2.0.0
+tqdm>=4.65.0
