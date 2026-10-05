@@ -22,20 +22,6 @@
   .controls label { background: rgba(0,0,0,.35); padding: 6px 12px; border-radius: 999px; font-size: 13px; }
   .controls input { vertical-align: middle; width: 110px; }
   .controls select { font: inherit; background: #1b2b24; color: var(--text); border: 0; border-radius: 6px; padding: 2px 6px; margin-left: 4px; }
-  @media (max-width: 700px) {
-    .topbar { position: relative; flex-wrap: nowrap; }
-    #roundlbl { display: none; }                       /* only the Trump suit stays visible */
-    #menubtn { display: block; }
-    .controls { display: none; position: absolute; top: 100%; right: 0; z-index: 4; margin-top: 6px; min-width: 230px;
-                flex-direction: column; align-items: stretch; background: var(--panel-2); border-radius: 12px; padding: 10px;
-                box-shadow: 0 6px 20px rgba(0,0,0,.5); }
-    .topbar.open .controls { display: flex; }
-    .controls label { border-radius: 8px; }
-    .controls input { width: 100%; margin-top: 4px; }
-    .controls select { margin: 0 0 0 6px; }
-    .controls button { padding: 10px 14px; }
-    html[dir=rtl] .controls { right: auto; left: 0; }
-  }
   .seat .shown { display: flex; flex-wrap: wrap; justify-content: center; gap: 2px; margin-top: 6px; }
   .seat .shown .card { width: 26px; height: 38px; font-size: 11px; box-shadow: 0 1px 2px rgba(0,0,0,.5); }
   .seat .shown .card small { font-size: 11px; }
@@ -113,6 +99,45 @@
   html[dir=rtl] .arena { direction: ltr; }
   html[dir=rtl] .seat { direction: rtl; }
   html[dir=rtl] body { font-family: "Segoe UI", Tahoma, system-ui, sans-serif; }
+  /* phone layout: last, so it overrides the desktop sizes above */
+  @media (max-width: 700px) {
+    .topbar { position: relative; flex-wrap: nowrap; }
+    #roundlbl { display: none; }                       /* only the Trump suit stays visible */
+    #menubtn { display: block; }
+    .controls { display: none; position: absolute; top: 100%; right: 0; z-index: 4; margin-top: 6px; min-width: 230px;
+                flex-direction: column; align-items: stretch; background: var(--panel-2); border-radius: 12px; padding: 10px;
+                box-shadow: 0 6px 20px rgba(0,0,0,.5); }
+    .topbar.open .controls { display: flex; }
+    .controls label { border-radius: 8px; }
+    .controls input { width: 100%; margin-top: 4px; }
+    .controls select { margin: 0 0 0 6px; }
+    .controls button { padding: 10px 14px; }
+    html[dir=rtl] .controls { right: auto; left: 0; }
+
+    /* more room for the table: no log, no rules text, score sheet reduced to its titles and last line */
+    #log, #logh, #rules { display: none; }
+    #scores tr:not(:first-child):not(:last-child) { display: none; }
+    aside { padding: 8px 14px; max-height: none; }
+    aside h2 { margin: 4px 0; }
+    .table { padding: 8px 8px; gap: 6px; min-height: 0; }
+    .status { font-size: 13px; min-height: 18px; }
+    .arena { grid-template-columns: 84px 1fr 84px; gap: 4px; }
+    .seat { padding: 6px 4px; }
+    .seat h3 { font-size: 13px; }
+    .seat.n { min-width: 150px; }
+    .card { width: 40px; height: 58px; font-size: 14px; border-radius: 5px; }
+    .card small { font-size: 15px; }
+    .hand { gap: 2px; padding: 2px; min-height: 66px; }
+    .hand .card { width: 42px; height: 62px; }
+    .hand .gap { width: 5px; }
+    .seat .shown .card { width: 20px; height: 29px; font-size: 9px; }
+    .seat .shown .card small { font-size: 9px; }
+    .center { min-height: 170px; }
+    .bid-panel { padding: 6px; font-size: 13px; }
+    .bid-panel button { min-width: 34px; padding: 6px 8px; }
+    .backs i { width: 10px; height: 18px; margin-left: -5px; }
+    .reveal .card { width: 26px; height: 38px; font-size: 11px; }
+  }
 </style>
 </head>
 <body>
@@ -151,7 +176,7 @@
     <h2 data-i18n="scoresH">Scores (41 to win)</h2>
     <table id="scores"></table>
     <p style="color:var(--muted);font-size:12px" id="rules"></p>
-    <h2 data-i18n="logH">Log</h2>
+    <h2 data-i18n="logH" id="logh">Log</h2>
     <div id="log"></div>
   </aside>
 </div>
