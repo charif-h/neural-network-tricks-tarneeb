@@ -181,7 +181,9 @@ class AIPlayer(TrumpPlayer):
 
 
 class Session:
-    def __init__(self):
+    def __init__(self, persist_stats=True):
+        """persist_stats: keep the stats in the shared stats files (False: private, in memory)."""
+        self.persist_stats = persist_stats
         self.cv = threading.Condition(threading.RLock())
         self.abort = threading.Event()
         self.version = 0
@@ -195,10 +197,19 @@ class Session:
         self.randomness = 0.0   # 0 = AI always greedy, 1 = AI always random
         self.reveal = False     # show the other players' hands
         self.model = DEFAULT_MODEL   # which weights the three AI players use (see MODELS)
-        self.stats = Stats(stats_path(self.model))
+        self.stats = self._new_stats(self.model)
         self.game = None
         self.thread = None
         self.start()
+
+    def _new_stats(self, model):
+        return Stats(stats_path(model) if self.persist_stats else None)
+
+    def close(self):
+        """Stop the game thread for good (the visitor left)."""
+        with self.cv:
+            self.abort.set()
+            self.cv.notify_all()
 
     # ---- state plumbing -------------------------------------------------
     def start(self):
@@ -230,7 +241,7 @@ class Session:
             self.action = None
             if model is not None and model != self.model:
                 self.model = model
-                self.stats = Stats(stats_path(model))
+                self.stats = self._new_stats(model)
             self.start()
 
     def set_model(self, name):

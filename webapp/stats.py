@@ -30,9 +30,12 @@ def _empty():
 
 class Stats:
     def __init__(self, path=STATS_PATH):
+        """path: JSON file the stats are kept in, or None to keep them in memory only."""
         self.path = path
         self.lock = threading.Lock()
         self.data = _empty()
+        if path is None:   # in-memory only
+            return
         try:
             with open(path) as f:
                 loaded = json.load(f)
@@ -42,6 +45,8 @@ class Stats:
             pass
 
     def _save(self):
+        if self.path is None:
+            return
         try:
             with open(self.path, 'w') as f:
                 json.dump(self.data, f)

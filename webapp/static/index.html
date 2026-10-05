@@ -157,6 +157,7 @@ const I18N = {
     trump: 'Trump', rand: 'AI randomness', model: 'AI model', stats: 'Stats', newGame: 'New game',
     randTitle: '0 = AI always plays its best move, 1 = AI plays completely at random',
     modelTitle: 'Which trained networks the three AI players use. Changing it starts a new game.',
+    busy: 'The table is full right now — try again in a few minutes.',
     reveal: 'Reveal hands', hide: 'Hide hands', scoresH: 'Scores (41 to win)', logH: 'Log',
     rules: 'Teams: <span class="good">You + Anas</span> vs <span class="bad">Jamal + Bilal</span>. A player scores their bid if they take at least that many tricks, otherwise loses it (bids 7-12 count double, 13 triple).',
     seats: ['You', 'Bilal', 'Anas', 'Jamal'], suits: { clubs: 'clubs', diamonds: 'diamonds', spades: 'spades', hearts: 'hearts' },
@@ -181,6 +182,7 @@ const I18N = {
     trump: 'الطرنيب', rand: 'عشوائية الذكاء الاصطناعي', model: 'نموذج الذكاء الاصطناعي', stats: 'الإحصائيات', newGame: 'لعبة جديدة',
     randTitle: '0 = يلعب الذكاء الاصطناعي دائمًا أفضل حركة، 1 = يلعب عشوائيًا تمامًا',
     modelTitle: 'الشبكات العصبية المدرَّبة التي يستخدمها اللاعبون الثلاثة. تغييرها يبدأ لعبة جديدة.',
+    busy: 'الطاولة ممتلئة حاليًا — حاول مجددًا بعد دقائق.',
     reveal: 'اكشف الأوراق', hide: 'أخفِ الأوراق', scoresH: 'النقاط (41 للفوز)', logH: 'السجل',
     rules: 'الفريقان: <span class="good">أنت + أنس</span> ضد <span class="bad">جمال + بلال</span>. يحصل اللاعب على نقاط مزايدته إذا أخذ عددًا من الأكلات يساويها أو يزيد عليها، وإلا خسرها (المزايدات 7-12 تُحتسب بالضعف، و13 بثلاثة أضعاف).',
     seats: ['أنت', 'بلال', 'أنس', 'جمال'], suits: { clubs: 'سباتي', diamonds: 'ديناري', spades: 'بستوني', hearts: 'كوبّة' },
@@ -210,6 +212,7 @@ const SERVER_MSG_AR = [
   [/^Game over$/, () => 'انتهت اللعبة'],
   [/^(\w+): bid (\d+), won (\d+) -> ([+-]?\d+)$/, (m, n, b, w, d) => `${trSeat(n)}: اضمن ${b}، أخذ ${w} ← <span dir="ltr">${d}</span>`],
   [/^Not waiting for a (\w+) right now$/, () => 'لا يُنتظر هذا الإجراء الآن'],
+  [/^The table is full$/, () => 'الطاولة ممتلئة'],
   [/^Invalid bid$/, () => 'ضمان غير صالح'],
   [/^That card cannot be played now$/, () => 'لا يمكن لعب هذه الورقة الآن'],
   [/^Model (\S+) is not available$/, (m, n) => `النموذج ${n} غير متوفر`],
@@ -370,7 +373,8 @@ function renderModal(st) {
 async function poll() {
   try {
     const st = await (await fetch('/api/state')).json();
-    if (st.version !== lastVersion) { lastVersion = st.version; render(st); }
+    if (st.busy) { $('status').textContent = T().busy; lastVersion = -1; }
+    else if (st.version !== lastVersion) { lastVersion = st.version; render(st); }
   } catch (e) { /* server restarting */ }
   setTimeout(poll, 300);
 }
