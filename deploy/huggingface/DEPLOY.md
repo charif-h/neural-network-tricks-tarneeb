@@ -5,9 +5,9 @@ The repository root holds a `Dockerfile` that runs the web table in demo mode on
 1. Create an account on https://huggingface.co and a new **Space** (SDK: **Docker**, hardware: free CPU basic).
 2. Clone the empty Space next to this repository:
    `git clone https://huggingface.co/spaces/<your-user>/<space-name>`
-3. Copy the project into it (without `.git`) and use the Space's front matter as its `README.md`:
+3. Copy the committed files into it. Use `git archive` (it keeps Unix line endings, which the Dockerfile needs; copying from a Windows checkout can give it CRLF endings and break the build), then use the Space's front matter as its `README.md`:
    ```
-   rsync -a --exclude .git --exclude .venv ./ ../<space-name>/     # or copy the files by hand on Windows
+   git archive HEAD | tar -x -C ../<space-name>
    cp deploy/huggingface/README.md ../<space-name>/README.md
    ```
 4. Commit and push from inside the Space folder (`git add -A && git commit -m "Demo" && git push`).
