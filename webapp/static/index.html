@@ -58,12 +58,12 @@
   .card.red { color: var(--red); }
   .card small { font-size: 22px; }
   .card.trump { box-shadow: 0 0 0 2px var(--gold), 0 2px 5px rgba(0,0,0,.45); }
-  .hand { display: flex; justify-content: center; flex-wrap: wrap; gap: 4px; padding: 6px; min-height: 100px; }
+  .hand { display: flex; justify-content: center; flex-wrap: wrap; gap: 4px 14px; padding: 6px; min-height: 100px; }
+  .hand .suitgroup { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; }   /* a suit is never split over two lines */
   .hand .card { width: 62px; height: 90px; transition: transform .1s; }
   .hand .card.legal { cursor: pointer; }
   .hand .card.legal:hover { transform: translateY(-12px); }
   .hand .card.dim { opacity: .45; }
-  .hand .gap { width: 10px; }
 
   .bid-panel { background: rgba(0,0,0,.4); border-radius: 12px; padding: 10px; text-align: center; }
   .bid-panel .row { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-top: 6px; }
@@ -127,9 +127,9 @@
     .seat.n { min-width: 150px; }
     .card { width: 40px; height: 58px; font-size: 14px; border-radius: 5px; }
     .card small { font-size: 15px; }
-    .hand { gap: 2px; padding: 2px; min-height: 66px; }
+    .hand { gap: 3px 8px; padding: 2px; min-height: 66px; }
+    .hand .suitgroup { gap: 2px; }
     .hand .card { width: 42px; height: 62px; }
-    .hand .gap { width: 5px; }
     .seat .shown .card { width: 20px; height: 29px; font-size: 9px; }
     .seat .shown .card small { font-size: 9px; }
     .center { min-height: 170px; }
@@ -338,16 +338,17 @@ function render(st) {
 
   // hand
   const hand = $('hand'); hand.innerHTML = '';
-  let prev = null;
+  let group = null;
   st.hand.forEach(c => {
-    if (prev && prev !== c.suit) { const g = document.createElement('span'); g.className = 'gap'; hand.appendChild(g); }
-    prev = c.suit;
+    if (!group || group.dataset.suit !== c.suit) {   // one container per suit, so wrapping keeps each suit on one line
+      group = document.createElement('div'); group.className = 'suitgroup'; group.dataset.suit = c.suit; hand.appendChild(group);
+    }
     const el = cardEl(c);
     if (st.awaiting === 'card') {
       if (st.legal.includes(c.id)) { el.classList.add('legal'); el.onclick = () => api('/api/card', { value: c.id }); }
       else el.classList.add('dim');
     }
-    hand.appendChild(el);
+    group.appendChild(el);
   });
 
   // status + bid panel
